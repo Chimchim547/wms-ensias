@@ -10,20 +10,92 @@
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2>Mouvements de Stock</h2>
-            <a href="/mouvements/transfert" class="btn btn-secondary">Déplacer un article</a>
+            <% if (user.role === 'MAGASINIER' || user.role === 'ADMINISTRATEUR') { %>
+                <a href="/mouvements/transfert" class="btn btn-secondary">Déplacer un article</a>
+            <% } %>
         </div>
-        <table class="table table-striped">
+
+        <!-- Filtre par type -->
+        <% if (user.role === 'MAGASINIER' || user.role === 'RESPONSABLE_ENTREPOT' || user.role === 'ADMINISTRATEUR') { %>
+        <div class="card mb-3">
+            <div class="card-body">
+                <form action="/mouvements" method="GET" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Type de mouvement</label>
+                        <select name="type" class="form-select">
+                            <option value="">Tous</option>
+                            <option value="ENTREE" <%= filtres.type === 'ENTREE' ? 'selected' : '' %>>Entrées</option>
+                            <option value="SORTIE" <%= filtres.type === 'SORTIE' ? 'selected' : '' %>>Sorties</option>
+                            <option value="TRANSFERT" <%= filtres.type === 'TRANSFERT' ? 'selected' : '' %>>Transferts</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary">Filtrer</button>
+                    </div>
+                </form>
+                <% if (filtres.type) { %>
+                    <a href="/mouvements" class="btn btn-outline-secondary btn-sm mt-2">Réinitialiser</a>
+                <% } %>
+            </div>
+        </div>
+        <% } %>
+
+        <!-- Stats rapides -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="card text-white bg-success text-center p-2">
+                    <h4><%= mouvements.filter(m => m.type === 'ENTREE').length %></h4>
+                    <small>Entrées</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-danger text-center p-2">
+                    <h4><%= mouvements.filter(m => m.type === 'SORTIE').length %></h4>
+                    <small>Sorties</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info text-center p-2">
+                    <h4><%= mouvements.filter(m => m.type === 'TRANSFERT').length %></h4>
+                    <small>Transferts</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-secondary text-center p-2">
+                    <h4><%= mouvements.length %></h4>
+                    <small>Total</small>
+                </div>
+            </div>
+        </div>
+
+        <p class="text-muted"><%= mouvements.length %> mouvement(s)</p>
+
+        <% if (mouvements.length === 0) { %>
+            <div class="alert alert-info">Aucun mouvement de stock enregistré.</div>
+        <% } else { %>
+        <table class="table table-striped table-hover">
             <thead class="table-dark">
-                <tr><th>Date</th><th>Type</th><th>Article</th><th>Quantité</th></tr>
+                <tr>
+                    <th>Date</th>
+                    <th>Heure</th>
+                    <th>Type</th>
+                    <th>Article</th>
+                    <th>Quantité</th>
+                </tr>
             </thead>
             <tbody>
                 <% mouvements.forEach(m => { %>
                 <tr>
                     <td><%= m.date.toLocaleDateString('fr-FR') %></td>
+                    <td><%= m.date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}) %></td>
                     <td>
-                        <span class="badge bg-<%= m.type === 'ENTREE' ? 'success' : m.type === 'SORTIE' ? 'danger' : 'info' %>">
-                            <%= m.type %>
-                        </span>
+                        <% if (m.type === 'ENTREE') { %>
+                            <span class="badge bg-success">ENTRÉE</span>
+                        <% } else if (m.type === 'SORTIE') { %>
+                            <span class="badge bg-danger">SORTIE</span>
+                        <% } else { %>
+                            <span class="badge bg-info">TRANSFERT</span>
+                        <% } %>
                     </td>
                     <td><%= m.article.reference %> - <%= m.article.designation %></td>
                     <td><%= m.quantite %></td>
@@ -31,6 +103,7 @@
                 <% }) %>
             </tbody>
         </table>
+        <% } %>
     </div>
 </body>
 </html>
