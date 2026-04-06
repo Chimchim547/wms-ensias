@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Planifier Inventaire</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <h2>Planifier un Inventaire</h2>
+        <p class="text-muted">Tous les articles seront inclus avec leur stock théorique actuel.</p>
+        <form action="/inventaire/planifier" method="POST" class="col-md-4">
+            <div class="mb-3">
+                <label class="form-label">Date de planification</label>
+                <input type="date" name="datePlanification" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-danger">Planifier</button>
+            <a href="/inventaire" class="btn btn-secondary">Annuler</a>
+        </form>
+    </div>
+</body>
+</html>

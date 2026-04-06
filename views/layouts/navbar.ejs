@@ -1,0 +1,50 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/dashboard">WMS ENSIAS</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto">
+        <% if (user) { %>
+
+          <% if (user.role === 'ADMINISTRATEUR') { %>
+            <li class="nav-item"><a class="nav-link" href="/articles">Articles</a></li>
+            <li class="nav-item"><a class="nav-link" href="/categories">Catégories</a></li>
+            <li class="nav-item"><a class="nav-link" href="/zones">Zones</a></li>
+            <li class="nav-item"><a class="nav-link" href="/emplacements">Emplacements</a></li>
+            <li class="nav-item"><a class="nav-link" href="/utilisateurs">Utilisateurs</a></li>
+            <li class="nav-item"><a class="nav-link" href="/articles/roulement">Roulement</a></li>
+          <% } %>
+
+          <% if (user.role === 'RESPONSABLE_ENTREPOT') { %>
+            <li class="nav-item"><a class="nav-link" href="/articles/stock">Stock</a></li>
+            <li class="nav-item"><a class="nav-link" href="/zones/plan">Plan entrepôt</a></li>
+            <li class="nav-item"><a class="nav-link" href="/emplacements/affecter">Affecter</a></li>
+            <li class="nav-item"><a class="nav-link" href="/inventaire">Inventaire</a></li>
+            <li class="nav-item"><a class="nav-link" href="/articles/roulement">Roulement</a></li>
+          <% } %>
+
+          <% if (user.role === 'RESPONSABLE_COMMANDE') { %>
+            <li class="nav-item"><a class="nav-link" href="/commandes">Commandes</a></li>
+          <% } %>
+
+          <% if (user.role === 'MAGASINIER') { %>
+            <li class="nav-item"><a class="nav-link" href="/mouvements">Mouvements</a></li>
+            <li class="nav-item"><a class="nav-link" href="/inventaire">Inventaire</a></li>
+          <% } %>
+
+          <% if (user.role === 'RESPONSABLE_RECEPTION') { %>
+            <li class="nav-item"><a class="nav-link" href="/reception">Réception</a></li>
+            <li class="nav-item"><a class="nav-link" href="/reception/fournisseurs">Fournisseurs</a></li>
+          <% } %>
+
+        <% } %>
+      </ul>
+      <div class="d-flex align-items-center">
+        <span class="text-light me-3"><%= user ? user.prenom + ' ' + user.nom + ' (' + user.role + ')' : '' %></span>
+        <a href="/logout" class="btn btn-outline-light btn-sm">Déconnexion</a>
+      </div>
+    </div>
+  </div>
+</nav>

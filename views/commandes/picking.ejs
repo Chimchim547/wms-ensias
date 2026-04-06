@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Picking & Préparation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .step { padding: 10px 20px; border-radius: 8px; text-align: center; }
+        .step-done { background: #d4edda; border: 2px solid #28a745; }
+        .step-current { background: #fff3cd; border: 2px solid #ffc107; }
+        .step-pending { background: #f0f0f0; border: 2px solid #ccc; }
+        .arrow { font-size: 1.5em; color: #666; }
+    </style>
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <h2>Préparation - Commande <%= commande.numero %></h2>
+        <p>Client: <strong><%= commande.nomClient %></strong> | Email: <%= commande.emailClient %> | Total: <strong><%= commande.prixTotal.toFixed(2) %> DH</strong></p>
+
+        <% if (commande.listePicking) { %>
+            <% const toutPreleve = commande.listePicking.lignes.every(l => l.quantitePrelevee >= l.quantite); %>
+            <% const toutDeplace = commande.lignes.every(l => !l.article.emplacementId); %>
+
+            <!-- Étapes visuelles -->
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <div class="step step-done">
+                    <strong>1. Picking</strong><br>
+                    <small>Liste générée ✓</small>
+                </div>
+                <span class="arrow">→</span>
+                <div class="step <%= toutPreleve ? 'step-done' : 'step-current' %>">
+                    <strong>2. Préparation</strong><br>
+                    <small><%= toutPreleve ? 'Articles prélevés ✓' : 'En attente' %></small>
+                </div>
+                <span class="arrow">→</span>
+                <div class="step <%= toutDeplace ? 'step-done' : (toutPreleve ? 'step-current' : 'step-pending') %>">
+                    <strong>3. Quai expédition</strong><br>
+                    <small><%= toutDeplace ? 'Articles au quai ✓' : 'En attente' %></small>
+                </div>
+                <span class="arrow">→</span>
+                <div class="step <%= toutDeplace ? 'step-current' : 'step-pending' %>">
+                    <strong>4. Expédition</strong><br>
+                    <small>En attente</small>
+                </div>
+            </div>
+
+            <!-- Liste de picking -->
+            <h4>Liste de Picking</h4>
+            <p class="text-muted">Généré le: <%= commande.listePicking.dateGeneration.toLocaleDateString('fr-FR') %></p>
+            <table class="table table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Article</th>
+                        <th>Référence</th>
+                        <th>Emplacement actuel</th>
+                        <th>Qté à prélever</th>
+                        <th>Qté prélevée</th>
+                        <th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% commande.listePicking.lignes.forEach(l => { %>
+                    <tr>
+                        <td><%= l.article.designation %></td>
+                        <td><%= l.article.reference %></td>
+                        <td>
+                            <% if (l.article.emplacement) { %>
+                                <span class="badge bg-info"><%= l.article.emplacement.code %> - Zone <%= l.article.emplacement.zone.code %></span>
+                            <% } else { %>
+                                <span class="badge bg-warning">Quai / Non affecté</span>
+                            <% } %>
+                        </td>
+                        <td><%= l.quantite %></td>
+                        <td><%= l.quantitePrelevee %></td>
+                        <td>
+                            <% if (l.quantitePrelevee >= l.quantite) { %>
+                                <span class="badge bg-success">Prélevé ✓</span>
+                            <% } else { %>
+                                <span class="badge bg-warning">À prélever</span>
+                            <% } %>
+                        </td>
+                    </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+
+            <!-- Boutons d'action selon l'étape -->
+            <div class="d-flex gap-2 mt-3">
+                <% if (!toutPreleve) { %>
+                    <form action="/commandes/preparer/<%= commande.id %>" method="POST">
+                        <button class="btn btn-warning" onclick="return confirm('Confirmer le prélèvement des articles ?')">
+                            2. Préparer les articles
+                        </button>
+                    </form>
+                <% } %>
+
+                <% if (toutPreleve && !toutDeplace) { %>
+                    <form action="/commandes/deplacer-quai/<%= commande.id %>" method="POST">
+                        <button class="btn btn-info" onclick="return confirm('Déplacer les articles vers le quai d\'expédition ?')">
+                            3. Déplacer vers quai d'expédition
+                        </button>
+                    </form>
+                <% } %>
+
+                <% if (toutDeplace) { %>
+                    <form action="/commandes/expedier/<%= commande.id %>" method="POST">
+                        <button class="btn btn-success" onclick="return confirm('Expédier cette commande ?')">
+                            4. Expédier la commande
+                        </button>
+                    </form>
+                <% } %>
+
+                <a href="/commandes" class="btn btn-secondary">Retour</a>
+            </div>
+
+        <% } else { %>
+            <p>Aucune liste de picking générée.</p>
+            <a href="/commandes" class="btn btn-secondary">Retour</a>
+        <% } %>
+    </div>
+</body>
+</html>

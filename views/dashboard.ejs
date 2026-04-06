@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('layouts/navbar') %>
+    <div class="container mt-4">
+        <h2>Tableau de bord</h2>
+        <p>Bienvenue, <strong><%= user.prenom %></strong> ! Rôle : <span class="badge bg-primary"><%= user.role %></span></p>
+
+        <div class="row mt-4">
+            <div class="col-md-2 mb-3">
+                <div class="card text-white bg-primary text-center p-3">
+                    <h3><%= stats.articles %></h3>
+                    <p>Articles</p>
+                </div>
+            </div>
+            <div class="col-md-2 mb-3">
+                <div class="card text-white bg-success text-center p-3">
+                    <h3><%= stats.zones %></h3>
+                    <p>Zones</p>
+                </div>
+            </div>
+            <div class="col-md-2 mb-3">
+                <div class="card text-white bg-info text-center p-3">
+                    <h3><%= stats.emplacements %></h3>
+                    <p>Emplacements</p>
+                </div>
+            </div>
+            <div class="col-md-2 mb-3">
+                <div class="card text-white bg-warning text-center p-3">
+                    <h3><%= stats.commandes %></h3>
+                    <p>Commandes</p>
+                </div>
+            </div>
+            <div class="col-md-2 mb-3">
+                <div class="card text-white bg-danger text-center p-3">
+                    <h3><%= stats.bonsReception %></h3>
+                    <p>Réceptions</p>
+                </div>
+            </div>
+            <div class="col-md-2 mb-3">
+                <div class="card text-white bg-secondary text-center p-3">
+                    <h3><%= stats.inventaires %></h3>
+                    <p>Inventaires</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <!-- ADMINISTRATEUR -->
+            <% if (user.role === 'ADMINISTRATEUR') { %>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-box"></i> Gestion des Articles</h5>
+                    <p>Créer, modifier, supprimer les articles</p>
+                    <a href="/articles" class="btn btn-primary btn-sm">Articles</a>
+                    <a href="/categories" class="btn btn-outline-primary btn-sm">Catégories</a>
+                </div></div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-geo-alt"></i> Gestion des Emplacements</h5>
+                    <p>Zones, emplacements et plan visuel</p>
+                    <a href="/zones" class="btn btn-success btn-sm">Zones</a>
+                    <a href="/emplacements" class="btn btn-outline-success btn-sm">Emplacements</a>
+                    <a href="/zones/plan" class="btn btn-outline-success btn-sm">Plan</a>
+                </div></div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-people"></i> Gestion des Utilisateurs</h5>
+                    <p>Créer et gérer les comptes</p>
+                    <a href="/utilisateurs" class="btn btn-dark btn-sm">Utilisateurs</a>
+                </div></div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-graph-up"></i> Taux de Roulement</h5>
+                    <p>Analyser la rotation du stock</p>
+                    <a href="/articles/roulement" class="btn btn-outline-info btn-sm">Voir</a>
+                </div></div>
+            </div>
+            <% } %>
+
+            <!-- RESPONSABLE_ENTREPOT -->
+            <% if (user.role === 'RESPONSABLE_ENTREPOT') { %>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-box"></i> Consultation du Stock</h5>
+                    <p>Voir l'état du stock des articles</p>
+                    <a href="/articles/stock" class="btn btn-primary btn-sm">Stock</a>
+                    <a href="/articles/roulement" class="btn btn-outline-info btn-sm">Taux de roulement</a>
+                </div></div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-geo-alt"></i> Entrepôt</h5>
+                    <p>Plan visuel et affectation</p>
+                    <a href="/zones/plan" class="btn btn-success btn-sm">Plan visuel</a>
+                    <a href="/emplacements/affecter" class="btn btn-outline-success btn-sm">Affecter</a>
+                </div></div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-clipboard-check"></i> Inventaire</h5>
+                    <p>Rapprochement et validation</p>
+                    <a href="/inventaire" class="btn btn-danger btn-sm">Inventaires</a>
+                </div></div>
+            </div>
+            <% } %>
+
+            <!-- RESPONSABLE_COMMANDE -->
+            <% if (user.role === 'RESPONSABLE_COMMANDE') { %>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-cart"></i> Gestion des Commandes</h5>
+                    <p>Créer et gérer les commandes clients</p>
+                    <a href="/commandes" class="btn btn-info btn-sm">Commandes</a>
+                    <a href="/commandes/create" class="btn btn-outline-info btn-sm">Nouvelle</a>
+                </div></div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-list-check"></i> Picking & Expédition</h5>
+                    <p>Générer le picking et expédier</p>
+                    <a href="/commandes" class="btn btn-warning btn-sm">Voir commandes</a>
+                </div></div>
+            </div>
+            <% } %>
+
+            <!-- MAGASINIER -->
+            <% if (user.role === 'MAGASINIER') { %>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-arrow-left-right"></i> Mouvements de Stock</h5>
+                    <p>Déplacer des articles entre emplacements</p>
+                    <a href="/mouvements" class="btn btn-secondary btn-sm">Mouvements</a>
+                    <a href="/mouvements/transfert" class="btn btn-outline-secondary btn-sm">Transfert</a>
+                </div></div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-clipboard-check"></i> Inventaire</h5>
+                    <p>Planifier et saisir les écarts</p>
+                    <a href="/inventaire/planifier" class="btn btn-danger btn-sm">Planifier</a>
+                    <a href="/inventaire" class="btn btn-outline-danger btn-sm">Voir</a>
+                </div></div>
+            </div>
+            <% } %>
+
+            <!-- RESPONSABLE_RECEPTION -->
+            <% if (user.role === 'RESPONSABLE_RECEPTION') { %>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-truck"></i> Réception</h5>
+                    <p>Créer les bons de réception</p>
+                    <a href="/reception" class="btn btn-warning btn-sm">Bons</a>
+                    <a href="/reception/create" class="btn btn-outline-warning btn-sm">Nouveau</a>
+                </div></div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-check-circle"></i> Qualité & Fournisseurs</h5>
+                    <p>Contrôle qualité et gestion fournisseurs</p>
+                    <a href="/reception/fournisseurs" class="btn btn-outline-warning btn-sm">Fournisseurs</a>
+                </div></div>
+            </div>
+            <% } %>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

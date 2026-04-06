@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Commandes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Commandes</h2>
+            <a href="/commandes/create" class="btn btn-info">+ Nouvelle commande</a>
+        </div>
+        <table class="table table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Numéro</th>
+                    <th>Date</th>
+                    <th>Client</th>
+                    <th>Total</th>
+                    <th>Articles</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% commandes.forEach(c => { %>
+                <tr>
+                    <td><%= c.numero %></td>
+                    <td><%= c.date.toLocaleDateString('fr-FR') %></td>
+                    <td><%= c.nomClient %></td>
+                    <td><%= c.prixTotal.toFixed(2) %> DH</td>
+                    <td><%= c.lignes.length %></td>
+                    <td>
+                        <% if (c.statut === 'EN_ATTENTE') { %>
+                            <span class="badge bg-secondary">En attente</span>
+                        <% } else if (c.statut === 'PICKING') { %>
+                            <span class="badge bg-primary">Picking généré</span>
+                        <% } else if (c.statut === 'PREPARE') { %>
+                            <span class="badge bg-warning">Préparée</span>
+                        <% } else if (c.statut === 'AU_QUAI') { %>
+                            <span class="badge bg-info">Au quai</span>
+                        <% } else if (c.statut === 'EXPEDIEE') { %>
+                            <span class="badge bg-success">Expédiée ✓</span>
+                        <% } %>
+                    </td>
+                    <td>
+                        <% if (c.statut === 'EN_ATTENTE') { %>
+                            <form action="/commandes/picking/<%= c.id %>" method="POST" class="d-inline">
+                                <button class="btn btn-sm btn-primary">Générer picking</button>
+                            </form>
+                        <% } else if (c.statut !== 'EXPEDIEE') { %>
+                            <a href="/commandes/picking/<%= c.id %>" class="btn btn-sm btn-outline-primary">Voir picking</a>
+                        <% } else { %>
+                            <span class="text-success">Terminée</span>
+                        <% } %>
+                    </td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5>Flux de préparation d'une commande</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-secondary p-2">1. Créer commande</span>
+                    <span>→</span>
+                    <span class="badge bg-primary p-2">2. Générer picking</span>
+                    <span>→</span>
+                    <span class="badge bg-warning p-2">3. Préparer articles</span>
+                    <span>→</span>
+                    <span class="badge bg-info p-2">4. Déplacer vers quai</span>
+                    <span>→</span>
+                    <span class="badge bg-success p-2">5. Expédier</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

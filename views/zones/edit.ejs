@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Modifier Zone</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <h2>Modifier Zone</h2>
+        <form action="/zones/edit/<%= zone.id %>" method="POST" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Code</label>
+                <input type="text" name="code" class="form-control" value="<%= zone.code %>" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Type</label>
+                <select name="type" class="form-select" required>
+                    <option value="stockage" <%= zone.type === 'stockage' ? 'selected' : '' %>>Stockage</option>
+                    <option value="reception" <%= zone.type === 'reception' ? 'selected' : '' %>>Réception</option>
+                    <option value="expedition" <%= zone.type === 'expedition' ? 'selected' : '' %>>Expédition</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Couleur</label>
+                <input type="color" name="couleur" class="form-control" value="<%= zone.couleur %>">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Poids max (kg)</label>
+                <input type="number" step="0.1" name="poidsMax" class="form-control" value="<%= zone.poidsMax %>" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Longueur max (cm)</label>
+                <input type="number" step="0.1" name="dimensionMaxLongueur" class="form-control" value="<%= zone.dimensionMaxLongueur %>" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Largeur max (cm)</label>
+                <input type="number" step="0.1" name="dimensionMaxLargeur" class="form-control" value="<%= zone.dimensionMaxLargeur %>" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Hauteur max (cm)</label>
+                <input type="number" step="0.1" name="dimensionMaxHauteur" class="form-control" value="<%= zone.dimensionMaxHauteur %>" required>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-warning">Modifier</button>
+                <a href="/zones" class="btn btn-secondary">Annuler</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMINISTRATEUR
+  RESPONSABLE_ENTREPOT
+  MAGASINIER
+  RESPONSABLE_COMMANDE
+  RESPONSABLE_RECEPTION
+}
+
+enum TypeMouvement {
+  ENTREE
+  SORTIE
+  TRANSFERT
+}
+
+model Utilisateur {
+  id        Int    @id @default(autoincrement())
+  nom       String
+  prenom    String
+  email     String @unique
+  motDePasse String
+  role      Role
+}
+
+model Categorie {
+  id          Int       @id @default(autoincrement())
+  nom         String
+  description String?
+  articles    Article[]
+}
+
+model Article {
+  id                Int      @id @default(autoincrement())
+  reference         String   @unique
+  designation       String
+  unite             String
+  longueur          Float
+  largeur           Float
+  hauteur           Float
+  poids             Float
+  prix              Float
+  coutMoyenPondere  Float    @default(0)
+  categorieId       Int
+  categorie         Categorie @relation(fields: [categorieId], references: [id])
+  emplacementId     Int?
+  emplacement       Emplacement? @relation(fields: [emplacementId], references: [id])
+  lignesCommande    LigneCommande[]
+  lignesPicking     LignePicking[]
+  lignesInventaire  LigneInventaire[]
+  lignesBonReception LigneBonReception[]
+  mouvements        MouvementStock[]
+}
+
+model Zone {
+  id                   Int           @id @default(autoincrement())
+  code                 String        @unique
+  type                 String
+  dimensionMaxLongueur Float
+  dimensionMaxLargeur  Float
+  dimensionMaxHauteur  Float
+  poidsMax             Float
+  couleur              String
+  emplacements         Emplacement[]
+}
+
+model Emplacement {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  longueur  Float
+  largeur   Float
+  hauteur   Float
+  poidsMax  Float
+  zoneId    Int
+  zone      Zone     @relation(fields: [zoneId], references: [id])
+  articles  Article[]
+}
+
+model Fournisseur {
+  id        Int    @id @default(autoincrement())
+  nom       String
+  adresse   String
+  telephone String
+  email     String @unique
+  bonsReception BonReception[]
+}
+
+model BonReception {
+  id            Int      @id @default(autoincrement())
+  numero        String   @unique
+  date          DateTime @default(now())
+  fournisseurId Int
+  fournisseur   Fournisseur @relation(fields: [fournisseurId], references: [id])
+  lignes        LigneBonReception[]
+  controleQualite ControleQualite?
+}
+
+model LigneBonReception {
+  id                 Int    @id @default(autoincrement())
+  quantiteCommandee  Int
+  quantiteRecue      Int
+  quantiteAcceptee   Int    @default(0)
+  observations       String?
+  articleId          Int
+  article            Article @relation(fields: [articleId], references: [id])
+  bonReceptionId     Int
+  bonReception       BonReception @relation(fields: [bonReceptionId], references: [id])
+}
+
+model ControleQualite {
+  id            Int      @id @default(autoincrement())
+  resultat      String
+  dateControle  DateTime @default(now())
+  commentaire   String?
+  bonReceptionId Int     @unique
+  bonReception   BonReception @relation(fields: [bonReceptionId], references: [id])
+}
+
+model Commande {
+  id            Int      @id @default(autoincrement())
+  numero        String   @unique
+  date          DateTime @default(now())
+  nomClient     String
+  emailClient   String
+  adresseClient String
+  prixTotal     Float    @default(0)
+  statut        String   @default("EN_ATTENTE")
+  lignes        LigneCommande[]
+  listePicking  ListePicking?
+}
+
+model LigneCommande {
+  id               Int    @id @default(autoincrement())
+  quantite         Int
+  quantitePreparee Int    @default(0)
+  articleId        Int
+  article          Article @relation(fields: [articleId], references: [id])
+  commandeId       Int
+  commande         Commande @relation(fields: [commandeId], references: [id])
+}
+
+model ListePicking {
+  id             Int      @id @default(autoincrement())
+  dateGeneration DateTime @default(now())
+  commandeId     Int      @unique
+  commande       Commande @relation(fields: [commandeId], references: [id])
+  lignes         LignePicking[]
+}
+
+model LignePicking {
+  id              Int    @id @default(autoincrement())
+  quantite        Int
+  quantitePrelevee Int   @default(0)
+  articleId       Int
+  article         Article @relation(fields: [articleId], references: [id])
+  listePickingId  Int
+  listePicking    ListePicking @relation(fields: [listePickingId], references: [id])
+}
+
+model MouvementStock {
+  id        Int            @id @default(autoincrement())
+  date      DateTime       @default(now())
+  type      TypeMouvement
+  quantite  Int
+  articleId Int
+  article   Article @relation(fields: [articleId], references: [id])
+}
+
+model Inventaire {
+  id                Int      @id @default(autoincrement())
+  datePlanification DateTime
+  dateRealisation   DateTime?
+  lignes            LigneInventaire[]
+}
+
+model LigneInventaire {
+  id                Int      @id @default(autoincrement())
+  reference         String
+  designation       String
+  quantiteTheorique Int
+  quantiteReelle    Int      @default(0)
+  ecart             Int      @default(0)
+  justificatif      String?
+  articleId         Int
+  article           Article @relation(fields: [articleId], references: [id])
+  inventaireId      Int
+  inventaire        Inventaire @relation(fields: [inventaireId], references: [id])
+}

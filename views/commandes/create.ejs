@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Nouvelle Commande</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <h2>Nouvelle Commande</h2>
+        <form action="/commandes/create" method="POST">
+            <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <label class="form-label">Numéro</label>
+                    <input type="text" name="numero" class="form-control" placeholder="CMD-001" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Nom client</label>
+                    <input type="text" name="nomClient" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Email client</label>
+                    <input type="email" name="emailClient" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Adresse client</label>
+                    <input type="text" name="adresseClient" class="form-control" required>
+                </div>
+            </div>
+            <h5>Articles</h5>
+            <div id="lignes">
+                <div class="row g-2 mb-2 ligne">
+                    <div class="col-md-6">
+                        <select name="articleIds" class="form-select" required>
+                            <% articles.forEach(a => { %>
+                            <option value="<%= a.id %>"><%= a.reference %> - <%= a.designation %> (<%= a.prix %> DH)</option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="number" name="quantites" class="form-control" placeholder="Quantité" required>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm mb-3" onclick="ajouterLigne()">+ Ajouter article</button>
+            <div>
+                <button type="submit" class="btn btn-info">Créer</button>
+                <a href="/commandes" class="btn btn-secondary">Annuler</a>
+            </div>
+        </form>
+    </div>
+    <script>
+    function ajouterLigne() {
+        const ligne = document.querySelector('.ligne').cloneNode(true);
+        ligne.querySelectorAll('input').forEach(i => i.value = '');
+        document.getElementById('lignes').appendChild(ligne);
+    }
+    </script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Emplacements</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Emplacements</h2>
+            <div>
+                <a href="/emplacements/affecter" class="btn btn-outline-primary">Affecter article</a>
+                <a href="/emplacements/create" class="btn btn-primary">+ Nouvel emplacement</a>
+            </div>
+        </div>
+        <table class="table table-striped">
+            <thead class="table-dark">
+                <tr><th>Code</th><th>Zone</th><th>Dimensions</th><th>Poids max</th><th>Statut</th><th>Article</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                <% emplacements.forEach(e => { %>
+                <tr>
+                    <td><%= e.code %></td>
+                    <td><%= e.zone.code %></td>
+                    <td><%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm</td>
+                    <td><%= e.poidsMax %> kg</td>
+                    <td><span class="badge bg-<%= e.articles.length > 0 ? 'danger' : 'success' %>"><%= e.articles.length > 0 ? 'Occupé' : 'Libre' %></span></td>
+                    <td><%= e.articles.length > 0 ? e.articles.map(a => a.reference).join(', ') : '-' %></td>
+                    <td>
+                        <form action="/emplacements/delete/<%= e.id %>" method="POST" class="d-inline">
+                            <button class="btn btn-sm btn-danger" onclick="return confirm('Supprimer ?')">Supprimer</button>
+                        </form>
+                    </td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

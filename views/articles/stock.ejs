@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Stock</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <h2>Consultation du Stock</h2>
+        <table class="table table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Référence</th><th>Désignation</th><th>Catégorie</th>
+                    <th>Stock</th><th>Prix</th><th>CUMP</th><th>Valeur</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% let totalValeur = 0; %>
+                <% articles.forEach(a => { %>
+                <% const valeur = a.stock * a.coutMoyenPondere; totalValeur += valeur; %>
+                <tr class="<%= a.stock <= 0 ? 'table-danger' : '' %>">
+                    <td><%= a.reference %></td>
+                    <td><%= a.designation %></td>
+                    <td><%= a.categorie ? a.categorie.nom : '-' %></td>
+                    <td><strong><%= a.stock %></strong></td>
+                    <td><%= a.prix.toFixed(2) %> DH</td>
+                    <td><%= a.coutMoyenPondere.toFixed(2) %> DH</td>
+                    <td><%= valeur.toFixed(2) %> DH</td>
+                </tr>
+                <% }) %>
+            </tbody>
+            <tfoot>
+                <tr class="table-primary">
+                    <td colspan="6"><strong>Valeur totale d'inventaire</strong></td>
+                    <td><strong><%= totalValeur.toFixed(2) %> DH</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+        <a href="/articles" class="btn btn-secondary">Retour</a>
+    </div>
+</body>
+</html>

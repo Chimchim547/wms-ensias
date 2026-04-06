@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Taux de Roulement</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <h2>Taux de Roulement du Stock</h2>
+        <p class="text-muted">Le taux de roulement mesure combien de fois le stock est renouvelé. Un taux élevé = bonne rotation.</p>
+        
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-white bg-info">
+                    <div class="card-body text-center">
+                        <h3><%= tauxGlobal %></h3>
+                        <p>Taux de roulement global</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-danger">
+                    <div class="card-body text-center">
+                        <h3><%= totalCoutSorties %> DH</h3>
+                        <p>Coût total des sorties</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-success">
+                    <div class="card-body text-center">
+                        <h3><%= articles.length %></h3>
+                        <p>Articles analysés</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Référence</th>
+                    <th>Désignation</th>
+                    <th>Catégorie</th>
+                    <th>Entrées</th>
+                    <th>Sorties</th>
+                    <th>Stock actuel</th>
+                    <th>Stock moyen</th>
+                    <th>CUMP</th>
+                    <th>Taux de roulement</th>
+                    <th>Performance</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% articles.forEach(a => { %>
+                <tr>
+                    <td><%= a.reference %></td>
+                    <td><%= a.designation %></td>
+                    <td><%= a.categorie ? a.categorie.nom : '-' %></td>
+                    <td class="text-success"><strong><%= a.entrees %></strong></td>
+                    <td class="text-danger"><strong><%= a.sorties %></strong></td>
+                    <td><%= a.stock %></td>
+                    <td><%= a.stockMoyen %></td>
+                    <td><%= a.coutMoyenPondere.toFixed(2) %> DH</td>
+                    <td><strong><%= a.tauxRoulement %></strong></td>
+                    <td>
+                        <% if (parseFloat(a.tauxRoulement) >= 4) { %>
+                            <span class="badge bg-success">Excellent</span>
+                        <% } else if (parseFloat(a.tauxRoulement) >= 2) { %>
+                            <span class="badge bg-info">Bon</span>
+                        <% } else if (parseFloat(a.tauxRoulement) >= 1) { %>
+                            <span class="badge bg-warning">Moyen</span>
+                        <% } else { %>
+                            <span class="badge bg-danger">Faible</span>
+                        <% } %>
+                    </td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+        
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5>Légende</h5>
+                <span class="badge bg-success">Excellent (≥4)</span> Stock renouvelé 4+ fois — très bonne gestion
+                <span class="badge bg-info ms-2">Bon (2-4)</span> Rotation correcte
+                <span class="badge bg-warning ms-2">Moyen (1-2)</span> Stock un peu lent
+                <span class="badge bg-danger ms-2">Faible (<1)</span> Stock stagnant — risque de sur-stockage
+            </div>
+        </div>
+        
+        <a href="/dashboard" class="btn btn-secondary mt-3">Retour au dashboard</a>
+    </div>
+</body>
+</html>
