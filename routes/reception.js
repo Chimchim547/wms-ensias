@@ -147,4 +147,83 @@ router.post('/fournisseurs/create', async (req, res) => {
   res.redirect('/reception/fournisseurs');
 });
 
+router.get('/pdf/:id', async (req, res) => {
+  const PDFDocument = require('pdfkit');
+  const bon = await prisma.bonReception.findUnique({
+    where: { id: parseInt(req.params.id) },
+    include: { 
+      fournisseur: true, 
+      lignes: { include: { article: true } },
+      controleQualite: true 
+    }
+  });
+
+  if (!bon) return res.status(404).send('Bon introuvable');
+
+  const doc = new PDFDocument({ margin: 50 });
+  
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'attachment; filename=BR-' + bon.numero + '.pdf');
+  doc.pipe(res);
+
+  // En-tête
+  doc.fontSize(20).font('Helvetica-Bold').text('WMS ENSIAS', { align: 'center' });
+  doc.fontSize(14).text('Bon de Reception', { align: 'center' });
+  doc.moveDown();
+
+  // Infos du bon
+  doc.fontSize(10).font('Helvetica');
+  doc.text('Numero: ' + bon.numero);
+  doc.text('Date: ' + bon.date.toLocaleDateString('fr-FR'));
+  doc.text('Fournisseur: ' + bon.fournisseur.nom);
+  doc.text('Adresse: ' + bon.fournisseur.adresse);
+  doc.text('Telephone: ' + bon.fournisseur.telephone);
+  doc.moveDown();
+
+  // Tableau des articles
+  doc.font('Helvetica-Bold').fontSize(11);
+  const tableTop = doc.y;
+  doc.text('Reference', 50, tableTop, { width: 80 });
+  doc.text('Designation', 130, tableTop, { width: 150 });
+  doc.text('Qte Cmd', 280, tableTop, { width: 60 });
+  doc.text('Qte Recue', 340, tableTop, { width: 70 });
+  doc.text('Qte Acceptee', 410, tableTop, { width: 80 });
+  
+  doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+  
+  doc.font('Helvetica').fontSize(10);
+  let y = tableTop + 25;
+  
+  bon.lignes.forEach(ligne => {
+    doc.text(ligne.article.reference, 50, y, { width: 80 });
+    doc.text(ligne.article.designation, 130, y, { width: 150 });
+    doc.text(String(ligne.quantiteCommandee), 280, y, { width: 60 });
+    doc.text(String(ligne.quantiteRecue), 340, y, { width: 70 });
+    doc.text(String(ligne.quantiteAcceptee), 410, y, { width: 80 });
+    y += 20;
+  });
+
+  // Contrôle qualité
+  if (bon.controleQualite) {
+    doc.moveDown(2);
+    y = doc.y;
+    doc.moveTo(50, y).lineTo(550, y).stroke();
+    doc.moveDown();
+    doc.font('Helvetica-Bold').fontSize(11).text('Controle Qualite');
+    doc.font('Helvetica').fontSize(10);
+    doc.text('Resultat: ' + bon.controleQualite.resultat);
+    doc.text('Date: ' + bon.controleQualite.dateControle.toLocaleDateString('fr-FR'));
+    if (bon.controleQualite.commentaire) {
+      doc.text('Commentaire: ' + bon.controleQualite.commentaire);
+    }
+  }
+
+  // Pied de page
+  doc.moveDown(3);
+  doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+  doc.moveDown();
+  doc.fontSize(9).text('Document genere automatiquement par WMS ENSIAS - ' + new Date().toLocaleDateString('fr-FR'), { align: 'center' });
+
+  doc.end();
+});
 module.exports = router;

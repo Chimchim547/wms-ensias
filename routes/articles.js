@@ -68,9 +68,11 @@ router.get('/stock', async (req, res) => {
   const articlesWithStock = articles.map(article => {
     const entrees = article.mouvements.filter(m => m.type === 'ENTREE').reduce((sum, m) => sum + m.quantite, 0);
     const sorties = article.mouvements.filter(m => m.type === 'SORTIE').reduce((sum, m) => sum + m.quantite, 0);
-    return { ...article, stock: entrees - sorties };
+    const stock = entrees - sorties;
+    return { ...article, stock, enAlerte: stock <= article.seuilAlerte };
   });
-  res.render('articles/stock', { articles: articlesWithStock });
+  const alertes = articlesWithStock.filter(a => a.enAlerte);
+  res.render('articles/stock', { articles: articlesWithStock, alertes });
 });
 // Taux de roulement
 router.get('/roulement', async (req, res) => {

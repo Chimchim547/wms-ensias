@@ -39,7 +39,19 @@ router.get('/affecter', async (req, res) => {
     include: { zone: true, articles: true }
   });
   const emplacementsLibres = emplacements.filter(e => e.articles.length === 0);
-  res.render('emplacements/affecter', { articles, emplacements: emplacementsLibres });
+  
+  // Pour chaque article, trouver les emplacements compatibles
+  const articlesWithCompatible = articles.map(article => {
+    const compatibles = emplacementsLibres.filter(e => 
+      article.longueur <= e.longueur &&
+      article.largeur <= e.largeur &&
+      article.hauteur <= e.hauteur &&
+      article.poids <= e.poidsMax
+    );
+    return { ...article, compatibles };
+  });
+  
+  res.render('emplacements/affecter', { articles: articlesWithCompatible, emplacements: emplacementsLibres });
 });
 
 router.post('/affecter', async (req, res) => {
@@ -50,15 +62,34 @@ router.post('/affecter', async (req, res) => {
     include: { zone: true }
   });
   
-  if (article.longueur > emplacement.longueur || article.largeur > emplacement.largeur ||
-      article.hauteur > emplacement.hauteur || article.poids > emplacement.poidsMax) {
-    return res.render('error', { message: 'Article trop grand ou trop lourd pour cet emplacement' });
+  // Double vérification côté serveur
+  const problemes = [];
+  if (article.longueur > emplacement.longueur) problemes.push('Longueur: ' + article.longueur + ' > ' + emplacement.longueur + ' cm');
+  if (article.largeur > emplacement.largeur) problemes.push('Largeur: ' + article.largeur + ' > ' + emplacement.largeur + ' cm');
+  if (article.hauteur > emplacement.hauteur) problemes.push('Hauteur: ' + article.hauteur + ' > ' + emplacement.hauteur + ' cm');
+  if (article.poids > emplacement.poidsMax) problemes.push('Poids: ' + article.poids + ' > ' + emplacement.poidsMax + ' kg');
+  
+  if (problemes.length > 0) {
+    return res.render('emplacements/erreur-affectation', {
+      article,
+      emplacement,
+      problemes
+    });
   }
   
   await prisma.article.update({
     where: { id: parseInt(articleId) },
     data: { emplacementId: parseInt(emplacementId) }
   });
+
+  await prisma.notification.create({
+    data: {
+      message: 'Article ' + article.reference + ' affecté à ' + emplacement.code + ' (Zone ' + emplacement.zone.code + ')',
+      lien: '/zones/plan',
+      destinataireRole: 'RESPONSABLE_ENTREPOT'
+    }
+  });
+
   res.redirect('/emplacements');
 });
 

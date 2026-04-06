@@ -226,6 +226,7 @@
                     </form>
                 <% } %>
 
+                <a href="/commandes/picking-pdf/<%= commande.id %>" class="btn btn-outline-danger">Picking PDF</a>
                 <a href="<%= user.role === 'MAGASINIER' ? '/commandes/preparation' : '/commandes' %>" class="btn btn-secondary">Retour</a>
             </div>
 

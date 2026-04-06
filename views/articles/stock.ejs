@@ -9,32 +9,70 @@
     <%- include('../layouts/navbar') %>
     <div class="container mt-4">
         <h2>Consultation du Stock</h2>
-        <table class="table table-striped">
+
+        <% if (alertes && alertes.length > 0) { %>
+        <div class="alert alert-danger mt-3">
+            <h5>🔴 Alertes Stock Bas — <%= alertes.length %> article(s) sous le seuil de sécurité</h5>
+            <table class="table table-sm table-danger mb-0 mt-2">
+                <thead>
+                    <tr><th>Référence</th><th>Désignation</th><th>Stock actuel</th><th>Seuil alerte</th><th>Manquant</th></tr>
+                </thead>
+                <tbody>
+                    <% alertes.forEach(a => { %>
+                    <tr>
+                        <td><strong><%= a.reference %></strong></td>
+                        <td><%= a.designation %></td>
+                        <td><strong><%= a.stock %></strong></td>
+                        <td><%= a.seuilAlerte %></td>
+                        <td><span class="badge bg-danger"><%= a.seuilAlerte - a.stock %> à commander</span></td>
+                    </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+        <% } else { %>
+        <div class="alert alert-success mt-3">
+            ✅ Tous les articles sont au-dessus du seuil de sécurité.
+        </div>
+        <% } %>
+
+        <table class="table table-striped mt-3">
             <thead class="table-dark">
                 <tr>
                     <th>Référence</th><th>Désignation</th><th>Catégorie</th>
-                    <th>Stock</th><th>Prix</th><th>CUMP</th><th>Valeur</th>
+                    <th>Stock</th><th>Seuil</th><th>Prix</th><th>CUMP</th><th>Valeur</th><th>Statut</th>
                 </tr>
             </thead>
             <tbody>
                 <% let totalValeur = 0; %>
                 <% articles.forEach(a => { %>
                 <% const valeur = a.stock * a.coutMoyenPondere; totalValeur += valeur; %>
-                <tr class="<%= a.stock <= 0 ? 'table-danger' : '' %>">
+                <tr class="<%= a.enAlerte ? 'table-danger' : '' %>">
                     <td><%= a.reference %></td>
                     <td><%= a.designation %></td>
                     <td><%= a.categorie ? a.categorie.nom : '-' %></td>
                     <td><strong><%= a.stock %></strong></td>
+                    <td><%= a.seuilAlerte %></td>
                     <td><%= a.prix.toFixed(2) %> DH</td>
                     <td><%= a.coutMoyenPondere.toFixed(2) %> DH</td>
                     <td><%= valeur.toFixed(2) %> DH</td>
+                    <td>
+                        <% if (a.stock <= 0) { %>
+                            <span class="badge bg-danger">Rupture</span>
+                        <% } else if (a.enAlerte) { %>
+                            <span class="badge bg-warning">Stock bas</span>
+                        <% } else { %>
+                            <span class="badge bg-success">OK</span>
+                        <% } %>
+                    </td>
                 </tr>
                 <% }) %>
             </tbody>
             <tfoot>
                 <tr class="table-primary">
-                    <td colspan="6"><strong>Valeur totale d'inventaire</strong></td>
+                    <td colspan="7"><strong>Valeur totale d'inventaire</strong></td>
                     <td><strong><%= totalValeur.toFixed(2) %> DH</strong></td>
+                    <td></td>
                 </tr>
             </tfoot>
         </table>

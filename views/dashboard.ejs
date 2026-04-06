@@ -13,44 +13,58 @@
         <h2>Tableau de bord</h2>
         <p>Bienvenue, <strong><%= user.prenom %></strong> ! Rôle : <span class="badge bg-primary"><%= user.role %></span></p>
 
+        <% if (user.role !== 'RESPONSABLE_COMMANDE') { %>
         <div class="row mt-4">
             <div class="col-md-2 mb-3">
+                <a href="/articles" class="text-decoration-none">
                 <div class="card text-white bg-primary text-center p-3">
                     <h3><%= stats.articles %></h3>
                     <p>Articles</p>
                 </div>
+                </a>
             </div>
             <div class="col-md-2 mb-3">
+                <a href="/zones" class="text-decoration-none">
                 <div class="card text-white bg-success text-center p-3">
                     <h3><%= stats.zones %></h3>
                     <p>Zones</p>
                 </div>
+                </a>
             </div>
             <div class="col-md-2 mb-3">
+                <a href="/emplacements" class="text-decoration-none">
                 <div class="card text-white bg-info text-center p-3">
                     <h3><%= stats.emplacements %></h3>
                     <p>Emplacements</p>
                 </div>
+                </a>
             </div>
             <div class="col-md-2 mb-3">
+                <a href="/commandes" class="text-decoration-none">
                 <div class="card text-white bg-warning text-center p-3">
                     <h3><%= stats.commandes %></h3>
                     <p>Commandes</p>
                 </div>
+                </a>
             </div>
             <div class="col-md-2 mb-3">
+                <a href="/reception" class="text-decoration-none">
                 <div class="card text-white bg-danger text-center p-3">
                     <h3><%= stats.bonsReception %></h3>
                     <p>Réceptions</p>
                 </div>
+                </a>
             </div>
             <div class="col-md-2 mb-3">
+                <a href="/inventaire" class="text-decoration-none">
                 <div class="card text-white bg-secondary text-center p-3">
                     <h3><%= stats.inventaires %></h3>
                     <p>Inventaires</p>
                 </div>
+                </a>
             </div>
         </div>
+        <% } %>
 
         <div class="row mt-3">
             <!-- ADMINISTRATEUR -->
@@ -131,12 +145,20 @@
 
             <!-- RESPONSABLE_COMMANDE -->
             <% if (user.role === 'RESPONSABLE_COMMANDE') { %>
+            <div class="col-12 mb-4">
+                <div class="card shadow"><div class="card-body text-center p-4">
+                    <h3><i class="bi bi-cart-check"></i> Actions rapides</h3>
+                    <p class="text-muted">Gérer les commandes clients</p>
+                    <a href="/commandes/create" class="btn btn-info btn-lg m-2">+ Nouvelle commande</a>
+                    <a href="/commandes" class="btn btn-outline-info btn-lg m-2">Toutes les commandes</a>
+                </div></div>
+            </div>
             <div class="col-md-4 mb-3">
                 <a href="/commandes?statut=EN_ATTENTE" class="text-decoration-none">
                 <div class="card text-white bg-secondary">
-                    <div class="card-body text-center">
+                    <div class="card-body text-center p-3">
                         <h3><%= stats.cmdEnAttente || 0 %></h3>
-                        <p>En attente</p>
+                        <p class="mb-0">En attente</p>
                     </div>
                 </div>
                 </a>
@@ -144,9 +166,9 @@
             <div class="col-md-4 mb-3">
                 <a href="/commandes?statut=PICKING" class="text-decoration-none">
                 <div class="card text-white bg-primary">
-                    <div class="card-body text-center">
+                    <div class="card-body text-center p-3">
                         <h3><%= stats.cmdPicking || 0 %></h3>
-                        <p>En préparation</p>
+                        <p class="mb-0">En préparation</p>
                     </div>
                 </div>
                 </a>
@@ -154,9 +176,9 @@
             <div class="col-md-4 mb-3">
                 <a href="/commandes?statut=PARTIELLE" class="text-decoration-none">
                 <div class="card text-white bg-warning">
-                    <div class="card-body text-center">
+                    <div class="card-body text-center p-3">
                         <h3><%= stats.cmdPartielle || 0 %></h3>
-                        <p>⚠ Décision requise</p>
+                        <p class="mb-0">⚠ Décision requise</p>
                     </div>
                 </div>
                 </a>
@@ -164,9 +186,9 @@
             <div class="col-md-4 mb-3">
                 <a href="/commandes?statut=AU_QUAI" class="text-decoration-none">
                 <div class="card text-white bg-info">
-                    <div class="card-body text-center">
+                    <div class="card-body text-center p-3">
                         <h3><%= stats.cmdAuQuai || 0 %></h3>
-                        <p>Au quai</p>
+                        <p class="mb-0">Au quai</p>
                     </div>
                 </div>
                 </a>
@@ -174,19 +196,12 @@
             <div class="col-md-4 mb-3">
                 <a href="/commandes?statut=EXPEDIEE" class="text-decoration-none">
                 <div class="card text-white bg-success">
-                    <div class="card-body text-center">
+                    <div class="card-body text-center p-3">
                         <h3><%= stats.cmdExpediee || 0 %></h3>
-                        <p>Expédiées ✓</p>
+                        <p class="mb-0">Expédiées ✓</p>
                     </div>
                 </div>
                 </a>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-cart"></i> Actions rapides</h5>
-                    <a href="/commandes/create" class="btn btn-info btn-sm mb-1">+ Nouvelle commande</a>
-                    <a href="/commandes" class="btn btn-outline-info btn-sm mb-1">Toutes les commandes</a>
-                </div></div>
             </div>
             <% } %>
 

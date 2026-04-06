@@ -10,6 +10,7 @@
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2>Mouvements de Stock</h2>
+            <a href="/mouvements/pdf?type=<%= filtres.type || '' %>" class="btn btn-outline-danger">Exporter PDF</a>
             <% if (user.role === 'MAGASINIER' || user.role === 'ADMINISTRATEUR') { %>
                 <a href="/mouvements/transfert" class="btn btn-secondary">Déplacer un article</a>
             <% } %>

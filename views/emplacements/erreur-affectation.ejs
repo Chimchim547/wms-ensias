@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Erreur Affectation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <h2 class="text-danger">Affectation impossible</h2>
+        
+        <div class="row mt-4">
+            <div class="col-md-5">
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">Article</div>
+                    <div class="card-body">
+                        <h5><%= article.reference %> - <%= article.designation %></h5>
+                        <p>Longueur : <strong><%= article.longueur %> cm</strong></p>
+                        <p>Largeur : <strong><%= article.largeur %> cm</strong></p>
+                        <p>Hauteur : <strong><%= article.hauteur %> cm</strong></p>
+                        <p>Poids : <strong><%= article.poids %> kg</strong></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 d-flex align-items-center justify-content-center">
+                <h1 class="text-danger">✗</h1>
+            </div>
+            <div class="col-md-5">
+                <div class="card border-danger">
+                    <div class="card-header bg-danger text-white">Emplacement <%= emplacement.code %></div>
+                    <div class="card-body">
+                        <h5>Zone <%= emplacement.zone.code %></h5>
+                        <p>Longueur : <strong><%= emplacement.longueur %> cm</strong></p>
+                        <p>Largeur : <strong><%= emplacement.largeur %> cm</strong></p>
+                        <p>Hauteur : <strong><%= emplacement.hauteur %> cm</strong></p>
+                        <p>Poids max : <strong><%= emplacement.poidsMax %> kg</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-danger mt-4">
+            <h5>Raisons du refus :</h5>
+            <ul>
+                <% problemes.forEach(p => { %>
+                <li><strong><%= p %></strong></li>
+                <% }) %>
+            </ul>
+        </div>
+
+        <a href="/emplacements/affecter" class="btn btn-primary">Réessayer avec un autre emplacement</a>
+        <a href="/emplacements" class="btn btn-secondary">Retour aux emplacements</a>
+    </div>
+</body>
+</html>

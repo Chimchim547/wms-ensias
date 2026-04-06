@@ -9,29 +9,159 @@
     <%- include('../layouts/navbar') %>
     <div class="container mt-4">
         <h2>Affecter un Article à un Emplacement</h2>
-        <p class="text-muted">L'affectation vérifie automatiquement les dimensions et le poids.</p>
-        <form action="/emplacements/affecter" method="POST" class="col-md-6">
+        <p class="text-muted">Le système filtre automatiquement les emplacements compatibles selon les dimensions et le poids de l'article.</p>
+        
+        <form action="/emplacements/affecter" method="POST" class="col-md-8">
             <div class="mb-3">
                 <label class="form-label">Article (non affecté)</label>
-                <select name="articleId" class="form-select" required>
+                <select name="articleId" class="form-select" id="articleSelect" required>
+                    <option value="">-- Sélectionnez un article --</option>
                     <% articles.forEach(a => { %>
-                    <option value="<%= a.id %>"><%= a.reference %> - <%= a.designation %> (<%= a.longueur %>x<%= a.largeur %>x<%= a.hauteur %> cm, <%= a.poids %> kg)</option>
+                    <option value="<%= a.id %>" 
+                        data-longueur="<%= a.longueur %>" 
+                        data-largeur="<%= a.largeur %>" 
+                        data-hauteur="<%= a.hauteur %>" 
+                        data-poids="<%= a.poids %>"
+                        data-compatibles="<%= JSON.stringify(a.compatibles.map(c => c.id)) %>">
+                        <%= a.reference %> - <%= a.designation %> (<%= a.longueur %>x<%= a.largeur %>x<%= a.hauteur %> cm, <%= a.poids %> kg)
+                    </option>
                     <% }) %>
                 </select>
             </div>
+
+            <!-- Détails de l'article sélectionné -->
+            <div id="articleDetails" class="card mb-3" style="display:none;">
+                <div class="card-body">
+                    <h6>Dimensions de l'article sélectionné :</h6>
+                    <div class="row">
+                        <div class="col-md-3"><span class="badge bg-primary p-2" id="artLongueur"></span></div>
+                        <div class="col-md-3"><span class="badge bg-primary p-2" id="artLargeur"></span></div>
+                        <div class="col-md-3"><span class="badge bg-primary p-2" id="artHauteur"></span></div>
+                        <div class="col-md-3"><span class="badge bg-primary p-2" id="artPoids"></span></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="mb-3">
-                <label class="form-label">Emplacement (libre)</label>
-                <select name="emplacementId" class="form-select" required>
-                    <% emplacements.forEach(e => { %>
-                    <option value="<%= e.id %>"><%= e.code %> - Zone <%= e.zone.code %> (<%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm, max <%= e.poidsMax %> kg)</option>
-                    <% }) %>
+                <label class="form-label">Emplacement compatible (libre)</label>
+                <select name="emplacementId" class="form-select" id="emplacementSelect" required>
+                    <option value="">-- Sélectionnez d'abord un article --</option>
                 </select>
+                <div id="noCompatible" class="alert alert-warning mt-2" style="display:none;">
+                    Aucun emplacement disponible pour cet article — dimensions ou poids trop élevés. Créez un emplacement plus grand ou libérez un emplacement existant.
+                </div>
+                <div id="compatibleCount" class="text-success mt-1" style="display:none;"></div>
             </div>
-            <div class="col-12">
-                <button type="submit" class="btn btn-primary">Affecter</button>
-                <a href="/emplacements" class="btn btn-secondary">Annuler</a>
-            </div>
+
+            <button type="submit" class="btn btn-primary" id="btnAffecter" disabled>Affecter</button>
+            <a href="/emplacements" class="btn btn-secondary">Annuler</a>
         </form>
+
+        <!-- Tableau récapitulatif de tous les emplacements libres -->
+        <div class="mt-4">
+            <h5>Emplacements libres disponibles</h5>
+            <table class="table table-sm table-striped">
+                <thead class="table-dark">
+                    <tr><th>Code</th><th>Zone</th><th>Longueur</th><th>Largeur</th><th>Hauteur</th><th>Poids max</th></tr>
+                </thead>
+                <tbody>
+                    <% emplacements.forEach(e => { %>
+                    <tr id="emp-row-<%= e.id %>">
+                        <td><%= e.code %></td>
+                        <td><%= e.zone.code %></td>
+                        <td><%= e.longueur %> cm</td>
+                        <td><%= e.largeur %> cm</td>
+                        <td><%= e.hauteur %> cm</td>
+                        <td><%= e.poidsMax %> kg</td>
+                    </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    <script>
+    const emplacementsData = <%- JSON.stringify(emplacements.map(e => ({
+        id: e.id,
+        code: e.code,
+        zone: e.zone.code,
+        longueur: e.longueur,
+        largeur: e.largeur,
+        hauteur: e.hauteur,
+        poidsMax: e.poidsMax
+    }))) %>;
+
+    document.getElementById('articleSelect').addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        const emplacementSelect = document.getElementById('emplacementSelect');
+        const articleDetails = document.getElementById('articleDetails');
+        const noCompatible = document.getElementById('noCompatible');
+        const compatibleCount = document.getElementById('compatibleCount');
+        const btnAffecter = document.getElementById('btnAffecter');
+        
+        // Reset
+        emplacementSelect.innerHTML = '';
+        noCompatible.style.display = 'none';
+        compatibleCount.style.display = 'none';
+        btnAffecter.disabled = true;
+
+        // Reset tableau highlighting
+        emplacementsData.forEach(e => {
+            const row = document.getElementById('emp-row-' + e.id);
+            if (row) { row.style.background = ''; row.style.fontWeight = ''; }
+        });
+
+        if (!this.value) {
+            articleDetails.style.display = 'none';
+            emplacementSelect.innerHTML = '<option value="">-- Sélectionnez d\'abord un article --</option>';
+            return;
+        }
+
+        // Afficher détails article
+        const longueur = selected.dataset.longueur;
+        const largeur = selected.dataset.largeur;
+        const hauteur = selected.dataset.hauteur;
+        const poids = selected.dataset.poids;
+        
+        document.getElementById('artLongueur').textContent = 'L: ' + longueur + ' cm';
+        document.getElementById('artLargeur').textContent = 'l: ' + largeur + ' cm';
+        document.getElementById('artHauteur').textContent = 'H: ' + hauteur + ' cm';
+        document.getElementById('artPoids').textContent = 'P: ' + poids + ' kg';
+        articleDetails.style.display = 'block';
+
+        // Filtrer emplacements compatibles
+        const compatibleIds = JSON.parse(selected.dataset.compatibles);
+        
+        if (compatibleIds.length === 0) {
+            emplacementSelect.innerHTML = '<option value="">Aucun emplacement compatible</option>';
+            noCompatible.style.display = 'block';
+            return;
+        }
+
+        compatibleCount.textContent = compatibleIds.length + ' emplacement(s) compatible(s) trouvé(s)';
+        compatibleCount.style.display = 'block';
+
+        emplacementSelect.innerHTML = '<option value="">-- Choisir un emplacement --</option>';
+        
+        emplacementsData.forEach(e => {
+            if (compatibleIds.includes(e.id)) {
+                const option = document.createElement('option');
+                option.value = e.id;
+                option.textContent = e.code + ' - Zone ' + e.zone + ' (' + e.longueur + 'x' + e.largeur + 'x' + e.hauteur + ' cm, max ' + e.poidsMax + ' kg)';
+                emplacementSelect.appendChild(option);
+
+                // Highlight dans le tableau
+                const row = document.getElementById('emp-row-' + e.id);
+                if (row) { row.style.background = '#d4edda'; row.style.fontWeight = 'bold'; }
+            }
+        });
+
+        btnAffecter.disabled = false;
+    });
+
+    document.getElementById('emplacementSelect').addEventListener('change', function() {
+        document.getElementById('btnAffecter').disabled = !this.value;
+    });
+    </script>
 </body>
 </html>

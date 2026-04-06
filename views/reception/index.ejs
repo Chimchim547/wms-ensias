@@ -39,6 +39,7 @@
                         <% if (!b.controleQualite) { %>
                             <a href="/reception/controle/<%= b.id %>" class="btn btn-sm btn-info">Contrôle qualité</a>
                         <% } %>
+                        <a href="/reception/pdf/<%= b.id %>" class="btn btn-sm btn-outline-danger">PDF</a>
                     </td>
                 </tr>
                 <% }) %>

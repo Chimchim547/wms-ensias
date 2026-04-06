@@ -108,8 +108,10 @@
                             <a href="/commandes/picking/<%= c.id %>" class="btn btn-sm btn-outline-primary">
                                 <%= c.statut === 'PARTIELLE' ? '⚠ Décision' : 'Voir picking' %>
                             </a>
-                        <% } else if (c.statut === 'EXPEDIEE') { %>
-                            <span class="text-success">Terminée</span>
+                      <% } else if (c.statut === 'EXPEDIEE') { %>
+                           <span class="text-success">Terminée</span>
+                            <a href="/commandes/pdf/<%= c.id %>" class="btn btn-sm btn-outline-danger ms-1">BL</a>
+                            <a href="/commandes/facture/<%= c.id %>" class="btn btn-sm btn-outline-dark ms-1">Facture</a>
                         <% } else { %>
                             <span class="text-danger">Annulée</span>
                         <% } %>
