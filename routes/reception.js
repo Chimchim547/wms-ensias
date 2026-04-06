@@ -40,6 +40,15 @@ router.post('/create', async (req, res) => {
         lignes: { create: lignes }
       }
     });
+
+    await prisma.notification.create({
+      data: {
+        message: `Nouveau bon de réception ${numero} créé avec ${ids.length} article(s). Contrôle qualité en attente.`,
+        lien: '/reception',
+        destinataireRole: 'RESPONSABLE_RECEPTION'
+      }
+    });
+
     res.redirect('/reception');
   } catch (err) {
     res.status(400).render('error', { message: 'Erreur: ' + err.message });
@@ -97,7 +106,33 @@ router.post('/controle/:id', async (req, res) => {
       });
     }
   }
-  
+
+  if (resultat === 'conforme') {
+    await prisma.notification.create({
+      data: {
+        message: `Bon ${bon.numero} : contrôle qualité conforme ✓. Stock mis à jour. Veuillez affecter les articles aux emplacements.`,
+        lien: '/emplacements/affecter',
+        destinataireRole: 'RESPONSABLE_ENTREPOT'
+      }
+    });
+  } else if (resultat === 'partiellement_conforme') {
+    await prisma.notification.create({
+      data: {
+        message: `⚠ Bon ${bon.numero} : contrôle partiellement conforme. Stock mis à jour avec les quantités acceptées. Vérifiez les emplacements.`,
+        lien: '/emplacements/affecter',
+        destinataireRole: 'RESPONSABLE_ENTREPOT'
+      }
+    });
+  } else {
+    await prisma.notification.create({
+      data: {
+        message: `❌ Bon ${bon.numero} : marchandise non conforme et refusée. Aucune entrée en stock.`,
+        lien: '/reception',
+        destinataireRole: 'RESPONSABLE_ENTREPOT'
+      }
+    });
+  }
+
   res.redirect('/reception');
 });
 

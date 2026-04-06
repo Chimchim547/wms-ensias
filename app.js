@@ -51,8 +51,20 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   res.locals.user = req.user;
+  res.locals.notifications = [];
+  if (req.user) {
+    try {
+      res.locals.notifications = await prisma.notification.findMany({
+        where: { destinataireRole: req.user.role },
+        orderBy: { createdAt: 'desc' },
+        take: 20
+      });
+    } catch (err) {
+      res.locals.notifications = [];
+    }
+  }
   next();
 });
 
@@ -79,10 +91,36 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     bonsReception: await prisma.bonReception.count(),
     inventaires: await prisma.inventaire.count(),
   };
+
+  if (req.user.role === 'RESPONSABLE_COMMANDE') {
+    stats.cmdEnAttente = await prisma.commande.count({ where: { statut: 'EN_ATTENTE' } });
+    stats.cmdPicking = await prisma.commande.count({ where: { statut: { in: ['PICKING', 'PREPARE'] } } });
+    stats.cmdPartielle = await prisma.commande.count({ where: { statut: 'PARTIELLE' } });
+    stats.cmdAuQuai = await prisma.commande.count({ where: { statut: 'AU_QUAI' } });
+    stats.cmdExpediee = await prisma.commande.count({ where: { statut: 'EXPEDIEE' } });
+  }
+
   res.render('dashboard', { user: req.user, stats });
 });
 
 app.get('/', (req, res) => res.redirect('/login'));
+// Routes notifications
+app.get('/notifications/lire/:id', isAuthenticated, async (req, res) => {
+  const notif = await prisma.notification.update({
+    where: { id: parseInt(req.params.id) },
+    data: { lue: true }
+  });
+  if (notif.lien) return res.redirect(notif.lien);
+  res.redirect('/dashboard');
+});
+
+app.get('/notifications/tout-lire', isAuthenticated, async (req, res) => {
+  await prisma.notification.updateMany({
+    where: { destinataireRole: req.user.role, lue: false },
+    data: { lue: true }
+  });
+  res.redirect('/dashboard');
+});
 
 const articlesRouter = require('./routes/articles');
 const categoriesRouter = require('./routes/categories');

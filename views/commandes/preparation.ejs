@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Préparation Commandes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <h2>Commandes à Préparer</h2>
+        <p class="text-muted">Liste des commandes en attente de prélèvement et préparation physique.</p>
+        
+        <% if (commandes.length === 0) { %>
+            <div class="alert alert-info">Aucune commande à préparer pour le moment.</div>
+        <% } else { %>
+        <table class="table table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Numéro</th>
+                    <th>Client</th>
+                    <th>Articles</th>
+                    <th>Total</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% commandes.forEach(c => { %>
+                <tr>
+                    <td><%= c.numero %></td>
+                    <td><%= c.nomClient %></td>
+                    <td><%= c.lignes.length %></td>
+                    <td><%= c.prixTotal.toFixed(2) %> DH</td>
+                    <td>
+                        <% if (c.statut === 'PICKING') { %>
+                            <span class="badge bg-warning">À prélever</span>
+                        <% } else if (c.statut === 'PREPARE') { %>
+                            <span class="badge bg-success">Prélevé ✓</span>
+                        <% } %>
+                    </td>
+                    <td>
+                        <a href="/commandes/picking/<%= c.id %>" class="btn btn-sm btn-info">
+                            <%= c.statut === 'PICKING' ? 'Prélever' : 'Voir' %>
+                        </a>
+                    </td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+        <% } %>
+    </div>
+</body>
+</html>

@@ -115,21 +115,63 @@
             </div>
             <% } %>
 
-            <!-- RESPONSABLE_COMMANDE -->
+           <!-- RESPONSABLE_COMMANDE -->
             <% if (user.role === 'RESPONSABLE_COMMANDE') { %>
             <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-cart"></i> Gestion des Commandes</h5>
-                    <p>Créer et gérer les commandes clients</p>
-                    <a href="/commandes" class="btn btn-info btn-sm">Commandes</a>
-                    <a href="/commandes/create" class="btn btn-outline-info btn-sm">Nouvelle</a>
-                </div></div>
+                <a href="/commandes?statut=EN_ATTENTE" class="text-decoration-none">
+                <div class="card text-white bg-secondary">
+                    <div class="card-body text-center">
+                        <h3><%= stats.cmdEnAttente || 0 %></h3>
+                        <p>En attente</p>
+                    </div>
+                </div>
+                </a>
+            </div>
+            <div class="col-md-4 mb-3">
+                <a href="/commandes?statut=PICKING" class="text-decoration-none">
+                <div class="card text-white bg-primary">
+                    <div class="card-body text-center">
+                        <h3><%= stats.cmdPicking || 0 %></h3>
+                        <p>En préparation</p>
+                    </div>
+                </div>
+                </a>
+            </div>
+            <div class="col-md-4 mb-3">
+                <a href="/commandes?statut=PARTIELLE" class="text-decoration-none">
+                <div class="card text-white bg-warning">
+                    <div class="card-body text-center">
+                        <h3><%= stats.cmdPartielle || 0 %></h3>
+                        <p>⚠ Décision requise</p>
+                    </div>
+                </div>
+                </a>
+            </div>
+            <div class="col-md-4 mb-3">
+                <a href="/commandes?statut=AU_QUAI" class="text-decoration-none">
+                <div class="card text-white bg-info">
+                    <div class="card-body text-center">
+                        <h3><%= stats.cmdAuQuai || 0 %></h3>
+                        <p>Au quai</p>
+                    </div>
+                </div>
+                </a>
+            </div>
+            <div class="col-md-4 mb-3">
+                <a href="/commandes?statut=EXPEDIEE" class="text-decoration-none">
+                <div class="card text-white bg-success">
+                    <div class="card-body text-center">
+                        <h3><%= stats.cmdExpediee || 0 %></h3>
+                        <p>Expédiées ✓</p>
+                    </div>
+                </div>
+                </a>
             </div>
             <div class="col-md-4 mb-3">
                 <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-list-check"></i> Picking & Expédition</h5>
-                    <p>Générer le picking et expédier</p>
-                    <a href="/commandes" class="btn btn-warning btn-sm">Voir commandes</a>
+                    <h5><i class="bi bi-cart"></i> Actions rapides</h5>
+                    <a href="/commandes/create" class="btn btn-info btn-sm mb-1">+ Nouvelle commande</a>
+                    <a href="/commandes" class="btn btn-outline-info btn-sm mb-1">Toutes les commandes</a>
                 </div></div>
             </div>
             <% } %>
@@ -142,6 +184,13 @@
                     <p>Déplacer des articles entre emplacements</p>
                     <a href="/mouvements" class="btn btn-secondary btn-sm">Mouvements</a>
                     <a href="/mouvements/transfert" class="btn btn-outline-secondary btn-sm">Transfert</a>
+                </div></div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card"><div class="card-body">
+                    <h5><i class="bi bi-cart-check"></i> Préparation Commandes</h5>
+                    <p>Prélever les articles et préparer les expéditions</p>
+                    <a href="/commandes/preparation" class="btn btn-info btn-sm">Commandes à préparer</a>
                 </div></div>
             </div>
             <div class="col-md-4 mb-3">

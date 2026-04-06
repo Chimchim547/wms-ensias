@@ -9,7 +9,9 @@
         .step-done { background: #d4edda; border: 2px solid #28a745; }
         .step-current { background: #fff3cd; border: 2px solid #ffc107; }
         .step-pending { background: #f0f0f0; border: 2px solid #ccc; }
+        .step-danger { background: #f8d7da; border: 2px solid #dc3545; }
         .arrow { font-size: 1.5em; color: #666; }
+        .alert-partielle { background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 20px; }
     </style>
 </head>
 <body>
@@ -20,48 +22,166 @@
 
         <% if (commande.listePicking) { %>
             <% const toutPreleve = commande.listePicking.lignes.every(l => l.quantitePrelevee >= l.quantite); %>
-            <% const toutDeplace = commande.lignes.every(l => !l.article.emplacementId); %>
+            <% const partiellementPreleve = commande.listePicking.lignes.some(l => l.quantitePrelevee > 0) && !toutPreleve; %>
+            <% const isPartielle = commande.statut === 'PARTIELLE'; %>
+            <% const toutDeplace = commande.statut === 'AU_QUAI' || commande.statut === 'EXPEDIEE'; %>
 
             <!-- Étapes visuelles -->
-            <div class="d-flex align-items-center gap-3 mb-4">
+            <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
                 <div class="step step-done">
                     <strong>1. Picking</strong><br>
                     <small>Liste générée ✓</small>
                 </div>
                 <span class="arrow">→</span>
-                <div class="step <%= toutPreleve ? 'step-done' : 'step-current' %>">
+                <div class="step <%= (commande.statut === 'PREPARE' || toutDeplace) ? 'step-done' : isPartielle ? 'step-danger' : (commande.statut === 'PICKING') ? 'step-current' : 'step-pending' %>">
                     <strong>2. Préparation</strong><br>
-                    <small><%= toutPreleve ? 'Articles prélevés ✓' : 'En attente' %></small>
+                    <small><%= (commande.statut === 'PREPARE' || toutDeplace) ? 'Complet ✓' : isPartielle ? 'Partielle ⚠' : commande.statut === 'PICKING' ? 'À prélever' : 'En attente' %></small>
                 </div>
                 <span class="arrow">→</span>
-                <div class="step <%= toutDeplace ? 'step-done' : (toutPreleve ? 'step-current' : 'step-pending') %>">
+                <% if (isPartielle) { %>
+                <div class="step step-danger">
+                    <strong>Décision client</strong><br>
+                    <small>En attente ⚠</small>
+                </div>
+                <span class="arrow">→</span>
+                <% } %>
+                <div class="step <%= toutDeplace ? 'step-done' : (commande.statut === 'PREPARE') ? 'step-current' : 'step-pending' %>">
                     <strong>3. Quai expédition</strong><br>
-                    <small><%= toutDeplace ? 'Articles au quai ✓' : 'En attente' %></small>
+                    <small><%= toutDeplace ? 'Au quai ✓' : 'En attente' %></small>
                 </div>
                 <span class="arrow">→</span>
-                <div class="step <%= toutDeplace ? 'step-current' : 'step-pending' %>">
+                <div class="step <%= commande.statut === 'EXPEDIEE' ? 'step-done' : (commande.statut === 'AU_QUAI') ? 'step-current' : 'step-pending' %>">
                     <strong>4. Expédition</strong><br>
-                    <small>En attente</small>
+                    <small><%= commande.statut === 'EXPEDIEE' ? 'Expédiée ✓' : 'En attente' %></small>
                 </div>
             </div>
+
+            <!-- Alerte commande annulée -->
+            <% if (commande.statut === 'ANNULEE') { %>
+            <div class="alert alert-danger">
+                <h5>Commande annulée</h5>
+                <p>Le client a choisi d'annuler cette commande. Les articles doivent être remis en stock.</p>
+            </div>
+            <% } %>
+
+            <!-- Alerte en attente de stock -->
+            <% if (commande.statut === 'EN_ATTENTE_STOCK') { %>
+            <div class="alert alert-warning">
+                <h5>En attente de réapprovisionnement</h5>
+                <p>Le client préfère attendre que tous les articles soient disponibles. La commande sera traitée quand le stock sera complet.</p>
+            </div>
+            <% } %>
+
+            <!-- Alerte commande partielle - décision nécessaire -->
+            <% if (isPartielle && user.role === 'RESPONSABLE_COMMANDE') { %>
+            <div class="alert-partielle mb-4">
+                <h5>⚠ Commande partielle — Décision requise</h5>
+                <p>Le magasinier n'a pas trouvé tous les articles demandés. Veuillez contacter le client <strong><%= commande.nomClient %></strong> (<%= commande.emailClient %>) pour lui communiquer la situation.</p>
+                
+                <h6>Articles manquants :</h6>
+                <table class="table table-sm">
+                    <thead><tr><th>Article</th><th>Demandé</th><th>Trouvé</th><th>Manquant</th></tr></thead>
+                    <tbody>
+                        <% commande.listePicking.lignes.forEach(l => { %>
+                            <% if (l.quantitePrelevee < l.quantite) { %>
+                            <tr class="table-warning">
+                                <td><%= l.article.reference %> - <%= l.article.designation %></td>
+                                <td><%= l.quantite %></td>
+                                <td><%= l.quantitePrelevee %></td>
+                                <td class="text-danger"><strong><%= l.quantite - l.quantitePrelevee %></strong></td>
+                            </tr>
+                            <% } %>
+                        <% }) %>
+                    </tbody>
+                </table>
+
+                <p class="mt-3"><strong>Quelle est la décision du client ?</strong></p>
+                <div class="d-flex gap-2">
+                    <form action="/commandes/decision/<%= commande.id %>" method="POST">
+                        <input type="hidden" name="decision" value="expedier_partiel">
+                        <button class="btn btn-warning">Le client accepte l'expédition partielle</button>
+                    </form>
+                    <form action="/commandes/decision/<%= commande.id %>" method="POST">
+                        <input type="hidden" name="decision" value="attendre">
+                        <button class="btn btn-info">Le client préfère attendre la commande complète</button>
+                    </form>
+                    <form action="/commandes/decision/<%= commande.id %>" method="POST">
+                        <input type="hidden" name="decision" value="annuler">
+                        <button class="btn btn-danger">Le client annule la commande</button>
+                    </form>
+                </div>
+            </div>
+            <% } %>
+
+            <!-- Alerte commande partielle vue par le magasinier -->
+            <% if (isPartielle && user.role === 'MAGASINIER') { %>
+            <div class="alert alert-warning">
+                <h5>⚠ Commande partielle</h5>
+                <p>Certains articles n'ont pas été trouvés en totalité. Le Responsable Commande va contacter le client pour prendre une décision.</p>
+            </div>
+            <% } %>
 
             <!-- Liste de picking -->
             <h4>Liste de Picking</h4>
             <p class="text-muted">Généré le: <%= commande.listePicking.dateGeneration.toLocaleDateString('fr-FR') %></p>
+
+            <% if (commande.statut === 'PICKING' && (user.role === 'MAGASINIER' || user.role === 'ADMINISTRATEUR')) { %>
+            <!-- Formulaire de saisie pour le magasinier -->
+            <form action="/commandes/preparer/<%= commande.id %>" method="POST">
+                <table class="table table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Article</th>
+                            <th>Référence</th>
+                            <th>Emplacement</th>
+                            <th>Qté demandée</th>
+                            <th>Qté prélevée</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% commande.listePicking.lignes.forEach(l => { %>
+                        <tr>
+                            <input type="hidden" name="ligneIds" value="<%= l.id %>">
+                            <td><%= l.article.designation %></td>
+                            <td><%= l.article.reference %></td>
+                            <td>
+                                <% if (l.article.emplacement) { %>
+                                    <span class="badge bg-info"><%= l.article.emplacement.code %> - Zone <%= l.article.emplacement.zone.code %></span>
+                                <% } else { %>
+                                    <span class="badge bg-warning">Non affecté</span>
+                                <% } %>
+                            </td>
+                            <td><strong><%= l.quantite %></strong></td>
+                            <td>
+                                <input type="number" name="quantitesPrelevees" class="form-control" 
+                                    value="<%= l.quantite %>" min="0" max="<%= l.quantite %>" required
+                                    style="max-width: 100px;">
+                            </td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+                <button type="submit" class="btn btn-warning" onclick="return confirm('Confirmer les quantités prélevées ?')">
+                    Valider le prélèvement
+                </button>
+            </form>
+
+            <% } else { %>
+            <!-- Affichage lecture seule -->
             <table class="table table-striped">
                 <thead class="table-dark">
                     <tr>
                         <th>Article</th>
                         <th>Référence</th>
-                        <th>Emplacement actuel</th>
-                        <th>Qté à prélever</th>
+                        <th>Emplacement</th>
+                        <th>Qté demandée</th>
                         <th>Qté prélevée</th>
                         <th>Statut</th>
                     </tr>
                 </thead>
                 <tbody>
                     <% commande.listePicking.lignes.forEach(l => { %>
-                    <tr>
+                    <tr class="<%= l.quantitePrelevee < l.quantite && l.quantitePrelevee > 0 ? 'table-warning' : '' %>">
                         <td><%= l.article.designation %></td>
                         <td><%= l.article.reference %></td>
                         <td>
@@ -75,35 +195,30 @@
                         <td><%= l.quantitePrelevee %></td>
                         <td>
                             <% if (l.quantitePrelevee >= l.quantite) { %>
-                                <span class="badge bg-success">Prélevé ✓</span>
+                                <span class="badge bg-success">Complet ✓</span>
+                            <% } else if (l.quantitePrelevee > 0) { %>
+                                <span class="badge bg-warning">Partiel ⚠</span>
                             <% } else { %>
-                                <span class="badge bg-warning">À prélever</span>
+                                <span class="badge bg-danger">Non prélevé</span>
                             <% } %>
                         </td>
                     </tr>
                     <% }) %>
                 </tbody>
             </table>
+            <% } %>
 
-            <!-- Boutons d'action selon l'étape -->
+            <!-- Boutons d'action -->
             <div class="d-flex gap-2 mt-3">
-                <% if (!toutPreleve) { %>
-                    <form action="/commandes/preparer/<%= commande.id %>" method="POST">
-                        <button class="btn btn-warning" onclick="return confirm('Confirmer le prélèvement des articles ?')">
-                            2. Préparer les articles
-                        </button>
-                    </form>
-                <% } %>
-
-                <% if (toutPreleve && !toutDeplace) { %>
+                <% if (commande.statut === 'PREPARE' && (user.role === 'MAGASINIER' || user.role === 'ADMINISTRATEUR')) { %>
                     <form action="/commandes/deplacer-quai/<%= commande.id %>" method="POST">
-                        <button class="btn btn-info" onclick="return confirm('Déplacer les articles vers le quai d\'expédition ?')">
+                        <button class="btn btn-info" onclick="return confirm('Déplacer les articles vers le quai ?')">
                             3. Déplacer vers quai d'expédition
                         </button>
                     </form>
                 <% } %>
 
-                <% if (toutDeplace) { %>
+                <% if (commande.statut === 'AU_QUAI' && (user.role === 'RESPONSABLE_COMMANDE' || user.role === 'ADMINISTRATEUR')) { %>
                     <form action="/commandes/expedier/<%= commande.id %>" method="POST">
                         <button class="btn btn-success" onclick="return confirm('Expédier cette commande ?')">
                             4. Expédier la commande
@@ -111,7 +226,7 @@
                     </form>
                 <% } %>
 
-                <a href="/commandes" class="btn btn-secondary">Retour</a>
+                <a href="<%= user.role === 'MAGASINIER' ? '/commandes/preparation' : '/commandes' %>" class="btn btn-secondary">Retour</a>
             </div>
 
         <% } else { %>

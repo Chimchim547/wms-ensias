@@ -31,13 +31,21 @@ router.post('/planifier', async (req, res) => {
     };
   });
   
-  await prisma.inventaire.create({
+  const inventaire = await prisma.inventaire.create({
     data: {
       datePlanification: new Date(datePlanification),
       lignes: { create: lignes }
     }
   });
-  
+
+  await prisma.notification.create({
+    data: {
+      message: `Inventaire #${inventaire.id} planifié pour le ${new Date(datePlanification).toLocaleDateString('fr-FR')} avec ${lignes.length} articles. Comptage physique à effectuer.`,
+      lien: '/inventaire/comptage/' + inventaire.id,
+      destinataireRole: 'MAGASINIER'
+    }
+  });
+
   res.redirect('/inventaire');
 });
 
@@ -56,11 +64,15 @@ router.post('/comptage/:id', async (req, res) => {
   const qrs = Array.isArray(quantitesReelles) ? quantitesReelles : [quantitesReelles];
   const justs = Array.isArray(justificatifs) ? justificatifs : [justificatifs];
   
+  let ecartsTrouves = false;
+
   for (let i = 0; i < ids.length; i++) {
     const ligne = await prisma.ligneInventaire.findUnique({ where: { id: parseInt(ids[i]) } });
     const qr = parseInt(qrs[i]);
     const ecart = qr - ligne.quantiteTheorique;
     
+    if (ecart !== 0) ecartsTrouves = true;
+
     await prisma.ligneInventaire.update({
       where: { id: parseInt(ids[i]) },
       data: {
@@ -70,7 +82,25 @@ router.post('/comptage/:id', async (req, res) => {
       }
     });
   }
-  
+
+  if (ecartsTrouves) {
+    await prisma.notification.create({
+      data: {
+        message: `⚠ Inventaire #${req.params.id} : des écarts ont été constatés lors du comptage physique. Rapprochement et validation nécessaires.`,
+        lien: '/inventaire/detail/' + req.params.id,
+        destinataireRole: 'RESPONSABLE_ENTREPOT'
+      }
+    });
+  } else {
+    await prisma.notification.create({
+      data: {
+        message: `Inventaire #${req.params.id} : comptage physique terminé. Aucun écart constaté ✓. Validation en attente.`,
+        lien: '/inventaire/detail/' + req.params.id,
+        destinataireRole: 'RESPONSABLE_ENTREPOT'
+      }
+    });
+  }
+
   res.redirect('/inventaire');
 });
 
@@ -87,7 +117,15 @@ router.post('/rapprochement/:id', async (req, res) => {
       data: { ecart }
     });
   }
-  
+
+  await prisma.notification.create({
+    data: {
+      message: `Inventaire #${req.params.id} : rapprochement automatique effectué. Prêt pour validation.`,
+      lien: '/inventaire/detail/' + req.params.id,
+      destinataireRole: 'RESPONSABLE_ENTREPOT'
+    }
+  });
+
   res.redirect(`/inventaire/detail/${req.params.id}`);
 });
 
@@ -96,6 +134,15 @@ router.post('/valider/:id', async (req, res) => {
     where: { id: parseInt(req.params.id) },
     data: { dateRealisation: new Date() }
   });
+
+  await prisma.notification.create({
+    data: {
+      message: `Inventaire #${req.params.id} validé ✓. Les données de stock sont maintenant à jour.`,
+      lien: '/inventaire/detail/' + req.params.id,
+      destinataireRole: 'ADMINISTRATEUR'
+    }
+  });
+
   res.redirect('/inventaire');
 });
 

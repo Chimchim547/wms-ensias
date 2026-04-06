@@ -12,15 +12,54 @@
             <h2>Commandes</h2>
             <a href="/commandes/create" class="btn btn-info">+ Nouvelle commande</a>
         </div>
+
+        <!-- Filtres -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label">Filtrer par statut</label>
+                        <select class="form-select" onchange="window.location.href='/commandes?statut='+this.value">
+                            <option value="" <%= !filtres.statut ? 'selected' : '' %>>Tous les statuts</option>
+                            <option value="EN_ATTENTE" <%= filtres.statut === 'EN_ATTENTE' ? 'selected' : '' %>>En attente</option>
+                            <option value="PICKING" <%= filtres.statut === 'PICKING' ? 'selected' : '' %>>Picking généré</option>
+                            <option value="PARTIELLE" <%= filtres.statut === 'PARTIELLE' ? 'selected' : '' %>>Partielle</option>
+                            <option value="PREPARE" <%= filtres.statut === 'PREPARE' ? 'selected' : '' %>>Préparée</option>
+                            <option value="AU_QUAI" <%= filtres.statut === 'AU_QUAI' ? 'selected' : '' %>>Au quai</option>
+                            <option value="EXPEDIEE" <%= filtres.statut === 'EXPEDIEE' ? 'selected' : '' %>>Expédiée</option>
+                            <option value="EN_ATTENTE_STOCK" <%= filtres.statut === 'EN_ATTENTE_STOCK' ? 'selected' : '' %>>En attente stock</option>
+                            <option value="ANNULEE" <%= filtres.statut === 'ANNULEE' ? 'selected' : '' %>>Annulée</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Rechercher</label>
+                        <form action="/commandes" method="GET" class="d-flex">
+                            <input type="hidden" name="statut" value="<%= filtres.statut || '' %>">
+                            <input type="text" name="recherche" class="form-control" placeholder="Numéro ou nom client..." value="<%= filtres.recherche || '' %>">
+                            <button type="submit" class="btn btn-primary ms-2">🔍</button>
+                        </form>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <% if (filtres.statut || filtres.recherche) { %>
+                            <a href="/commandes" class="btn btn-outline-secondary">Réinitialiser</a>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <p class="text-muted"><%= commandes.length %> commande(s) trouvée(s)</p>
+
         <table class="table table-striped">
             <thead class="table-dark">
                 <tr>
                     <th>Numéro</th>
-                    <th>Date</th>
+                    <th>Date création</th>
                     <th>Client</th>
                     <th>Total</th>
                     <th>Articles</th>
                     <th>Statut</th>
+                    <th>Date expédition</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -37,12 +76,27 @@
                             <span class="badge bg-secondary">En attente</span>
                         <% } else if (c.statut === 'PICKING') { %>
                             <span class="badge bg-primary">Picking généré</span>
+                        <% } else if (c.statut === 'PARTIELLE') { %>
+                            <span class="badge bg-warning">⚠ Partielle</span>
+                        <% } else if (c.statut === 'EN_ATTENTE_STOCK') { %>
+                            <span class="badge bg-info">En attente stock</span>
                         <% } else if (c.statut === 'PREPARE') { %>
-                            <span class="badge bg-warning">Préparée</span>
+                            <span class="badge bg-success">Préparée</span>
                         <% } else if (c.statut === 'AU_QUAI') { %>
                             <span class="badge bg-info">Au quai</span>
                         <% } else if (c.statut === 'EXPEDIEE') { %>
                             <span class="badge bg-success">Expédiée ✓</span>
+                        <% } else if (c.statut === 'ANNULEE') { %>
+                            <span class="badge bg-danger">Annulée</span>
+                        <% } %>
+                    </td>
+                    <td>
+                        <% if (c.statut === 'EXPEDIEE' && c.dateExpedition) { %>
+                            <%= c.dateExpedition.toLocaleDateString('fr-FR') %>
+                        <% } else if (c.statut === 'EXPEDIEE') { %>
+                            <span class="text-muted">-</span>
+                        <% } else { %>
+                            <span class="text-muted">-</span>
                         <% } %>
                     </td>
                     <td>
@@ -50,10 +104,14 @@
                             <form action="/commandes/picking/<%= c.id %>" method="POST" class="d-inline">
                                 <button class="btn btn-sm btn-primary">Générer picking</button>
                             </form>
-                        <% } else if (c.statut !== 'EXPEDIEE') { %>
-                            <a href="/commandes/picking/<%= c.id %>" class="btn btn-sm btn-outline-primary">Voir picking</a>
-                        <% } else { %>
+                        <% } else if (c.statut !== 'EXPEDIEE' && c.statut !== 'ANNULEE') { %>
+                            <a href="/commandes/picking/<%= c.id %>" class="btn btn-sm btn-outline-primary">
+                                <%= c.statut === 'PARTIELLE' ? '⚠ Décision' : 'Voir picking' %>
+                            </a>
+                        <% } else if (c.statut === 'EXPEDIEE') { %>
                             <span class="text-success">Terminée</span>
+                        <% } else { %>
+                            <span class="text-danger">Annulée</span>
                         <% } %>
                     </td>
                 </tr>
@@ -64,12 +122,14 @@
         <div class="card mt-4">
             <div class="card-body">
                 <h5>Flux de préparation d'une commande</h5>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
                     <span class="badge bg-secondary p-2">1. Créer commande</span>
                     <span>→</span>
                     <span class="badge bg-primary p-2">2. Générer picking</span>
                     <span>→</span>
-                    <span class="badge bg-warning p-2">3. Préparer articles</span>
+                    <span class="badge bg-warning p-2">3. Magasinier prélève</span>
+                    <span>→</span>
+                    <span class="badge bg-danger p-2">Si partiel → Décision client</span>
                     <span>→</span>
                     <span class="badge bg-info p-2">4. Déplacer vers quai</span>
                     <span>→</span>

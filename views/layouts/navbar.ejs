@@ -31,6 +31,7 @@
 
           <% if (user.role === 'MAGASINIER') { %>
             <li class="nav-item"><a class="nav-link" href="/mouvements">Mouvements</a></li>
+            <li class="nav-item"><a class="nav-link" href="/commandes/preparation">Préparation</a></li>
             <li class="nav-item"><a class="nav-link" href="/inventaire">Inventaire</a></li>
           <% } %>
 
@@ -42,6 +43,35 @@
         <% } %>
       </ul>
       <div class="d-flex align-items-center">
+        <% if (user && notifications) { %>
+        <div class="dropdown me-3">
+          <a class="btn btn-outline-light btn-sm position-relative dropdown-toggle" href="#" data-bs-toggle="dropdown">
+            🔔
+            <% if (notifications.filter(n => !n.lue).length > 0) { %>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+              <%= notifications.filter(n => !n.lue).length %>
+            </span>
+            <% } %>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" style="min-width: 350px; max-height: 400px; overflow-y: auto;">
+            <li><h6 class="dropdown-header">Notifications</h6></li>
+            <% if (notifications.length === 0) { %>
+              <li><span class="dropdown-item text-muted">Aucune notification</span></li>
+            <% } else { %>
+              <% notifications.forEach(n => { %>
+              <li>
+                <a class="dropdown-item <%= n.lue ? 'text-muted' : 'fw-bold' %>" href="/notifications/lire/<%= n.id %>">
+                  <small class="text-muted"><%= n.createdAt.toLocaleDateString('fr-FR') %> <%= n.createdAt.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}) %></small><br>
+                  <%= n.message %>
+                </a>
+              </li>
+              <% }) %>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-center" href="/notifications/tout-lire">Tout marquer comme lu</a></li>
+            <% } %>
+          </ul>
+        </div>
+        <% } %>
         <span class="text-light me-3"><%= user ? user.prenom + ' ' + user.nom + ' (' + user.role + ')' : '' %></span>
         <a href="/logout" class="btn btn-outline-light btn-sm">Déconnexion</a>
       </div>
