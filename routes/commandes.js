@@ -342,7 +342,7 @@ router.post('/expedier/:id', async (req, res) => {
   
   await prisma.commande.update({
     where: { id: commandeId },
-    data: { statut: 'EXPEDIEE' }
+    data: { statut: 'EXPEDIEE', dateExpedition: new Date() }
   });
 
   // Notif responsable entrepôt : stock mis à jour
