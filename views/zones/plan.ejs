@@ -5,213 +5,399 @@
     <title>WMS - Plan Entrepôt</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .entrepot {
-            background: #f0f0f0;
-            border: 3px solid #333;
+        .entrepot-container {
+            background: #2c3e50;
             border-radius: 12px;
             padding: 20px;
+            position: relative;
+            min-height: 600px;
+            overflow: hidden;
+        }
+        .entrepot-title {
+            text-align: center;
+            color: white;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+        .entrepot-grid {
+            display: grid;
+            grid-template-columns: 1fr 40px 2fr 40px 1fr;
+            grid-template-rows: auto;
+            gap: 10px;
             min-height: 500px;
         }
-        .zone-box {
-            border: 3px solid;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            position: relative;
+        .couloir {
+            background: repeating-linear-gradient(
+                0deg,
+                #f39c12,
+                #f39c12 10px,
+                #2c3e50 10px,
+                #2c3e50 20px
+            );
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .zone-header {
-            font-weight: bold;
-            font-size: 1.1em;
-            padding: 5px 12px;
-            border-radius: 5px;
+        .couloir-text {
+            writing-mode: vertical-rl;
             color: white;
+            font-weight: bold;
+            font-size: 0.7em;
+            letter-spacing: 3px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+        .zone-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .zone-block {
+            border-radius: 8px;
+            padding: 12px;
+            flex: 1;
+            position: relative;
+            min-height: 150px;
+        }
+        .zone-label {
+            font-weight: bold;
+            font-size: 0.95em;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
             display: inline-block;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
-        .zone-info {
-            font-size: 0.85em;
-            color: #666;
-            margin-bottom: 10px;
-        }
-        .zone-type {
+        .zone-type-badge {
             position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 0.8em;
+            top: 8px;
+            right: 10px;
+            font-size: 0.7em;
+            color: rgba(255,255,255,0.8);
+            background: rgba(0,0,0,0.3);
             padding: 2px 8px;
             border-radius: 3px;
-            color: white;
         }
-        .type-stockage { background: #3498db; }
-        .type-reception { background: #e67e22; }
-        .type-expedition { background: #9b59b6; }
-        .emplacements-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+        .zone-dims {
+            font-size: 0.7em;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 8px;
         }
-        .emplacement-box {
+        .emp-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 6px;
+        }
+        .emp-box {
             border: 2px solid;
             border-radius: 6px;
-            padding: 10px;
-            min-width: 120px;
+            padding: 6px;
             text-align: center;
-            font-size: 0.85em;
-            transition: transform 0.2s;
+            font-size: 0.75em;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
         }
-        .emplacement-box:hover {
-            transform: scale(1.05);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        .emp-box:hover {
+            transform: scale(1.08);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            z-index: 10;
         }
-        .libre {
-            background: #d4edda;
-            border-color: #28a745;
+        .emp-libre {
+            background: rgba(46, 204, 113, 0.3);
+            border-color: #2ecc71;
+            color: white;
         }
-        .libre .status-dot {
-            color: #28a745;
+        .emp-occupe {
+            background: rgba(231, 76, 60, 0.3);
+            border-color: #e74c3c;
+            color: white;
         }
-        .occupe {
-            background: #f8d7da;
-            border-color: #dc3545;
+        .emp-code {
+            font-weight: bold;
+            font-size: 1em;
         }
-        .occupe .status-dot {
-            color: #dc3545;
+        .emp-status {
+            font-size: 0.8em;
+            margin: 2px 0;
         }
-        .legende {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            padding: 10px 15px;
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #ddd;
+        .emp-article {
+            font-size: 0.7em;
+            color: #f1c40f;
+            font-weight: bold;
         }
-        .legende-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.9em;
-        }
-        .legende-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
+        .emp-dims {
+            font-size: 0.65em;
+            color: rgba(255,255,255,0.6);
         }
         .stats-bar {
             display: flex;
             gap: 15px;
             margin-bottom: 15px;
         }
-        .stat-item {
+        .stat-card {
             background: white;
             border-radius: 8px;
             padding: 10px 20px;
-            border: 1px solid #ddd;
             text-align: center;
+            flex: 1;
         }
         .stat-number {
-            font-size: 1.5em;
+            font-size: 1.8em;
             font-weight: bold;
+        }
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+        }
+        .legende {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            padding: 12px 15px;
+            background: white;
+            border-radius: 8px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .legende-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85em;
+        }
+        .legende-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .zone-stockage { background: rgba(52, 152, 219, 0.25); border: 2px solid #3498db; }
+        .zone-reception { background: rgba(230, 126, 34, 0.25); border: 2px solid #e67e22; }
+        .zone-expedition { background: rgba(155, 89, 182, 0.25); border: 2px solid #9b59b6; }
+        .portes {
+            text-align: center;
+            padding: 8px;
+            font-size: 0.8em;
+            color: white;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+        .tooltip-content {
+            display: none;
+            position: absolute;
+            bottom: 105%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2c3e50;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.75em;
+            white-space: nowrap;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .emp-box:hover .tooltip-content {
+            display: block;
+        }
+        .no-emp {
+            color: rgba(255,255,255,0.4);
+            font-style: italic;
+            font-size: 0.8em;
+            padding: 20px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <%- include('../layouts/navbar') %>
-    <div class="container mt-4">
+    <div class="container-fluid mt-4 px-4">
         <h2>Plan Visuel de l'Entrepôt</h2>
 
-        <div class="stats-bar mt-3">
-            <div class="stat-item">
+        <% let totalEmp = 0, totalLibre = 0, totalOccupe = 0;
+           let zonesReception = [], zonesStockage = [], zonesExpedition = [];
+           zones.forEach(z => {
+               z.emplacements.forEach(e => {
+                   totalEmp++;
+                   if(e.articles.length > 0) totalOccupe++; else totalLibre++;
+               });
+               if(z.type === 'reception') zonesReception.push(z);
+               else if(z.type === 'expedition') zonesExpedition.push(z);
+               else zonesStockage.push(z);
+           });
+        %>
+
+        <div class="stats-bar">
+            <div class="stat-card">
                 <div class="stat-number text-primary"><%= zones.length %></div>
-                <div>Zones</div>
+                <div class="stat-label">Zones</div>
             </div>
-            <div class="stat-item">
-                <% let totalEmp = 0; let totalLibre = 0; let totalOccupe = 0; %>
-                <% zones.forEach(z => { z.emplacements.forEach(e => { totalEmp++; if(e.articles.length > 0) totalOccupe++; else totalLibre++; }); }); %>
+            <div class="stat-card">
                 <div class="stat-number"><%= totalEmp %></div>
-                <div>Emplacements</div>
+                <div class="stat-label">Emplacements</div>
             </div>
-            <div class="stat-item">
+            <div class="stat-card">
                 <div class="stat-number text-success"><%= totalLibre %></div>
-                <div>Libres</div>
+                <div class="stat-label">Libres</div>
             </div>
-            <div class="stat-item">
+            <div class="stat-card">
                 <div class="stat-number text-danger"><%= totalOccupe %></div>
-                <div>Occupés</div>
+                <div class="stat-label">Occupés</div>
             </div>
-            <div class="stat-item">
+            <div class="stat-card">
                 <div class="stat-number text-info"><%= totalEmp > 0 ? Math.round((totalOccupe/totalEmp)*100) : 0 %>%</div>
-                <div>Taux occupation</div>
+                <div class="stat-label">Taux occupation</div>
             </div>
         </div>
 
-        <div class="entrepot">
-            <h5 class="text-center text-muted mb-3">ENTREPÔT WMS ENSIAS</h5>
-            <div class="row">
-                <% zones.forEach(z => { %>
-                <div class="col-md-6 mb-3">
-                    <div class="zone-box" style="border-color: <%= z.couleur %>; background: <%= z.couleur %>15;">
-                        <span class="zone-type type-<%= z.type %>"><%= z.type.toUpperCase() %></span>
-                        <div class="zone-header" style="background: <%= z.couleur %>;">
-                            <%= z.code %>
-                        </div>
-                        <div class="zone-info">
-                            Dimensions max: <%= z.dimensionMaxLongueur %> x <%= z.dimensionMaxLargeur %> x <%= z.dimensionMaxHauteur %> cm | Poids max: <%= z.poidsMax %> kg
-                        </div>
-                        <div class="emplacements-grid">
-                            <% z.emplacements.forEach(e => { %>
-                            <div class="emplacement-box <%= e.articles.length > 0 ? 'occupe' : 'libre' %>">
-                                <strong><%= e.code %></strong><br>
-                                <span class="status-dot"><%= e.articles.length > 0 ? '●' : '○' %></span>
-                                <span><%= e.articles.length > 0 ? 'PLEIN' : 'LIBRE' %></span><br>
-                                <small><%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm</small><br>
-                                <small>Max: <%= e.poidsMax %> kg</small>
-                                <% if (e.articles.length > 0) { %>
-                                    <hr style="margin:4px 0;">
-                                    <% e.articles.forEach(a => { %>
-                                        <small class="text-danger"><strong><%= a.reference %></strong></small><br>
-                                        <small><%= a.designation %></small><br>
-                                    <% }) %>
-                                <% } %>
+        <div class="entrepot-container">
+            <div class="entrepot-title">ENTREPÔT WMS ENSIAS — VUE DE DESSUS</div>
+            
+            <div class="entrepot-grid">
+                <!-- Zone Réception (gauche) -->
+                <div class="zone-section">
+                    <% if (zonesReception.length > 0) { %>
+                        <% zonesReception.forEach(z => { %>
+                        <div class="zone-block zone-reception" style="border-color: <%= z.couleur %>;">
+                            <span class="zone-type-badge">RÉCEPTION</span>
+                            <div class="zone-label" style="background: <%= z.couleur %>;"><%= z.code %></div>
+                            <div class="zone-dims">Max: <%= z.dimensionMaxLongueur %>x<%= z.dimensionMaxLargeur %>x<%= z.dimensionMaxHauteur %> cm | <%= z.poidsMax %> kg</div>
+                            <div class="emp-grid">
+                                <% z.emplacements.forEach(e => { %>
+                                <div class="emp-box <%= e.articles.length > 0 ? 'emp-occupe' : 'emp-libre' %>">
+                                    <div class="tooltip-content">
+                                        <%= e.code %> | <%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm | Max: <%= e.poidsMax %> kg
+                                        <% if(e.articles.length > 0) { %><br>Article: <%= e.articles[0].reference %> - <%= e.articles[0].designation %><% } %>
+                                    </div>
+                                    <div class="emp-code"><%= e.code %></div>
+                                    <div class="emp-status"><%= e.articles.length > 0 ? '● PLEIN' : '○ LIBRE' %></div>
+                                    <% if(e.articles.length > 0) { %>
+                                        <div class="emp-article"><%= e.articles[0].reference %></div>
+                                    <% } %>
+                                </div>
+                                <% }) %>
                             </div>
-                            <% }) %>
-                            <% if (z.emplacements.length === 0) { %>
-                                <p class="text-muted fst-italic">Aucun emplacement dans cette zone</p>
-                            <% } %>
+                            <% if(z.emplacements.length === 0) { %><div class="no-emp">Aucun emplacement</div><% } %>
                         </div>
-                    </div>
+                        <% }) %>
+                    <% } else { %>
+                        <div class="zone-block zone-reception">
+                            <span class="zone-label" style="background: #e67e22;">RÉCEPTION</span>
+                            <div class="no-emp">Aucune zone de réception</div>
+                        </div>
+                    <% } %>
+                    <div class="portes">⬆ QUAI RÉCEPTION</div>
                 </div>
-                <% }) %>
-                <% if (zones.length === 0) { %>
-                    <div class="col-12 text-center">
-                        <p class="text-muted">Aucune zone créée. <a href="/zones/create">Créer une zone</a></p>
-                    </div>
-                <% } %>
+
+                <!-- Couloir gauche -->
+                <div class="couloir">
+                    <span class="couloir-text">COULOIR</span>
+                </div>
+
+                <!-- Zones Stockage (centre) -->
+                <div class="zone-section">
+                    <% if (zonesStockage.length > 0) { %>
+                        <% zonesStockage.forEach(z => { %>
+                        <div class="zone-block zone-stockage" style="border-color: <%= z.couleur %>;">
+                            <span class="zone-type-badge">STOCKAGE</span>
+                            <div class="zone-label" style="background: <%= z.couleur %>;"><%= z.code %></div>
+                            <div class="zone-dims">Max: <%= z.dimensionMaxLongueur %>x<%= z.dimensionMaxLargeur %>x<%= z.dimensionMaxHauteur %> cm | <%= z.poidsMax %> kg</div>
+                            <div class="emp-grid">
+                                <% z.emplacements.forEach(e => { %>
+                                <div class="emp-box <%= e.articles.length > 0 ? 'emp-occupe' : 'emp-libre' %>">
+                                    <div class="tooltip-content">
+                                        <%= e.code %> | <%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm | Max: <%= e.poidsMax %> kg
+                                        <% if(e.articles.length > 0) { %><br>Article: <%= e.articles[0].reference %> - <%= e.articles[0].designation %><% } %>
+                                    </div>
+                                    <div class="emp-code"><%= e.code %></div>
+                                    <div class="emp-status"><%= e.articles.length > 0 ? '● PLEIN' : '○ LIBRE' %></div>
+                                    <% if(e.articles.length > 0) { %>
+                                        <div class="emp-article"><%= e.articles[0].reference %></div>
+                                    <% } %>
+                                </div>
+                                <% }) %>
+                            </div>
+                            <% if(z.emplacements.length === 0) { %><div class="no-emp">Aucun emplacement</div><% } %>
+                        </div>
+                        <% }) %>
+                    <% } else { %>
+                        <div class="zone-block zone-stockage">
+                            <span class="zone-label" style="background: #3498db;">STOCKAGE</span>
+                            <div class="no-emp">Aucune zone de stockage</div>
+                        </div>
+                    <% } %>
+                </div>
+
+                <!-- Couloir droit -->
+                <div class="couloir">
+                    <span class="couloir-text">COULOIR</span>
+                </div>
+
+                <!-- Zone Expédition (droite) -->
+                <div class="zone-section">
+                    <% if (zonesExpedition.length > 0) { %>
+                        <% zonesExpedition.forEach(z => { %>
+                        <div class="zone-block zone-expedition" style="border-color: <%= z.couleur %>;">
+                            <span class="zone-type-badge">EXPÉDITION</span>
+                            <div class="zone-label" style="background: <%= z.couleur %>;"><%= z.code %></div>
+                            <div class="zone-dims">Max: <%= z.dimensionMaxLongueur %>x<%= z.dimensionMaxLargeur %>x<%= z.dimensionMaxHauteur %> cm | <%= z.poidsMax %> kg</div>
+                            <div class="emp-grid">
+                                <% z.emplacements.forEach(e => { %>
+                                <div class="emp-box <%= e.articles.length > 0 ? 'emp-occupe' : 'emp-libre' %>">
+                                    <div class="tooltip-content">
+                                        <%= e.code %> | <%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm | Max: <%= e.poidsMax %> kg
+                                        <% if(e.articles.length > 0) { %><br>Article: <%= e.articles[0].reference %> - <%= e.articles[0].designation %><% } %>
+                                    </div>
+                                    <div class="emp-code"><%= e.code %></div>
+                                    <div class="emp-status"><%= e.articles.length > 0 ? '● PLEIN' : '○ LIBRE' %></div>
+                                    <% if(e.articles.length > 0) { %>
+                                        <div class="emp-article"><%= e.articles[0].reference %></div>
+                                    <% } %>
+                                </div>
+                                <% }) %>
+                            </div>
+                            <% if(z.emplacements.length === 0) { %><div class="no-emp">Aucun emplacement</div><% } %>
+                        </div>
+                        <% }) %>
+                    <% } else { %>
+                        <div class="zone-block zone-expedition">
+                            <span class="zone-label" style="background: #9b59b6;">EXPÉDITION</span>
+                            <div class="no-emp">Aucune zone d'expédition</div>
+                        </div>
+                    <% } %>
+                    <div class="portes">⬇ QUAI EXPÉDITION</div>
+                </div>
             </div>
         </div>
 
-        <div class="legende mt-3">
+        <div class="legende">
             <strong>Légende :</strong>
             <div class="legende-item">
-                <div class="legende-color" style="background: #d4edda; border-color: #28a745;"></div>
+                <div class="legende-color" style="background: rgba(46,204,113,0.3); border-color: #2ecc71;"></div>
                 <span>○ Libre</span>
             </div>
             <div class="legende-item">
-                <div class="legende-color" style="background: #f8d7da; border-color: #dc3545;"></div>
+                <div class="legende-color" style="background: rgba(231,76,60,0.3); border-color: #e74c3c;"></div>
                 <span>● Plein</span>
             </div>
             <div class="legende-item">
-                <div class="legende-color type-stockage"></div>
+                <div class="legende-color" style="background: rgba(52,152,219,0.25); border-color: #3498db;"></div>
                 <span>Stockage</span>
             </div>
             <div class="legende-item">
-                <div class="legende-color type-reception"></div>
+                <div class="legende-color" style="background: rgba(230,126,34,0.25); border-color: #e67e22;"></div>
                 <span>Réception</span>
             </div>
             <div class="legende-item">
-                <div class="legende-color type-expedition"></div>
+                <div class="legende-color" style="background: rgba(155,89,182,0.25); border-color: #9b59b6;"></div>
                 <span>Expédition</span>
+            </div>
+            <div class="legende-item">
+                <div class="legende-color" style="background: repeating-linear-gradient(0deg,#f39c12,#f39c12 3px,#2c3e50 3px,#2c3e50 6px);"></div>
+                <span>Couloir</span>
             </div>
         </div>
 
