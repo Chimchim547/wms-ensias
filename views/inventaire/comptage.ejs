@@ -9,20 +9,35 @@
     <%- include('../layouts/navbar') %>
     <div class="container mt-4">
         <h2>Comptage Physique - Inventaire #<%= inventaire.id %></h2>
-        <form action="/inventaire/comptage/<%= inventaire.id %>" method="POST">
+        <div class="alert alert-info">
+            <strong>Instructions :</strong> Saisissez la quantité réelle comptée physiquement pour chaque article. 
+            Si la quantité réelle est différente de la quantité théorique, le justificatif est <strong>obligatoire</strong>.
+        </div>
+        <form action="/inventaire/comptage/<%= inventaire.id %>" method="POST" id="formComptage">
             <table class="table">
                 <thead class="table-dark">
-                    <tr><th>Référence</th><th>Désignation</th><th>Qté théorique</th><th>Qté réelle</th><th>Justificatif</th></tr>
+                    <tr><th>Référence</th><th>Désignation</th><th>Qté théorique</th><th>Qté réelle</th><th>Écart</th><th>Justificatif</th></tr>
                 </thead>
                 <tbody>
-                    <% inventaire.lignes.forEach(l => { %>
+                    <% inventaire.lignes.forEach((l, index) => { %>
                     <tr>
                         <input type="hidden" name="ligneIds" value="<%= l.id %>">
                         <td><%= l.reference %></td>
                         <td><%= l.designation %></td>
-                        <td><%= l.quantiteTheorique %></td>
-                        <td><input type="number" name="quantitesReelles" class="form-control" value="<%= l.quantiteReelle %>" required></td>
-                        <td><input type="text" name="justificatifs" class="form-control" value="<%= l.justificatif || '' %>" placeholder="Justificatif si écart"></td>
+                        <td><strong><%= l.quantiteTheorique %></strong></td>
+                        <td>
+                            <input type="number" name="quantitesReelles" class="form-control qte-reelle" 
+                                value="<%= l.quantiteReelle %>" required min="0"
+                                data-theorique="<%= l.quantiteTheorique %>" data-index="<%= index %>">
+                        </td>
+                        <td>
+                            <span class="badge ecart-badge" id="ecart-<%= index %>">0</span>
+                        </td>
+                        <td>
+                            <input type="text" name="justificatifs" class="form-control justificatif" 
+                                id="justificatif-<%= index %>"
+                                value="<%= l.justificatif || '' %>" placeholder="Obligatoire si écart">
+                        </td>
                     </tr>
                     <% }) %>
                 </tbody>
@@ -31,5 +46,57 @@
             <a href="/inventaire" class="btn btn-secondary">Annuler</a>
         </form>
     </div>
+
+    <script>
+    // Calcul écart en temps réel
+    document.querySelectorAll('.qte-reelle').forEach(input => {
+        input.addEventListener('input', function() {
+            const index = this.dataset.index;
+            const theorique = parseInt(this.dataset.theorique);
+            const reelle = parseInt(this.value) || 0;
+            const ecart = reelle - theorique;
+            
+            const badge = document.getElementById('ecart-' + index);
+            const justificatif = document.getElementById('justificatif-' + index);
+            
+            badge.textContent = (ecart > 0 ? '+' : '') + ecart;
+            
+            if (ecart !== 0) {
+                badge.className = 'badge ecart-badge bg-danger';
+                justificatif.style.border = '2px solid #dc3545';
+                justificatif.placeholder = 'OBLIGATOIRE - Expliquez l\'écart';
+            } else {
+                badge.className = 'badge ecart-badge bg-success';
+                justificatif.style.border = '';
+                justificatif.placeholder = 'Pas d\'écart';
+            }
+        });
+        // Déclencher au chargement
+        input.dispatchEvent(new Event('input'));
+    });
+
+    // Validation avant soumission
+    document.getElementById('formComptage').addEventListener('submit', function(e) {
+        const qtes = document.querySelectorAll('.qte-reelle');
+        let erreurs = [];
+        
+        qtes.forEach(input => {
+            const index = input.dataset.index;
+            const theorique = parseInt(input.dataset.theorique);
+            const reelle = parseInt(input.value) || 0;
+            const ecart = reelle - theorique;
+            const justificatif = document.getElementById('justificatif-' + index).value.trim();
+            
+            if (ecart !== 0 && justificatif === '') {
+                erreurs.push('Article ligne ' + (parseInt(index) + 1) + ' : écart de ' + ecart + ' sans justificatif');
+            }
+        });
+        
+        if (erreurs.length > 0) {
+            e.preventDefault();
+            alert('Impossible d\'enregistrer le comptage :\n\n' + erreurs.join('\n') + '\n\nVeuillez fournir un justificatif pour chaque écart.');
+        }
+    });
+    </script>
 </body>
 </html>

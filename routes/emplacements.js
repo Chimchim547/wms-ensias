@@ -46,7 +46,11 @@ router.get('/affecter', async (req, res) => {
       article.longueur <= e.longueur &&
       article.largeur <= e.largeur &&
       article.hauteur <= e.hauteur &&
-      article.poids <= e.poidsMax
+      article.poids <= e.poidsMax &&
+      article.longueur <= e.zone.dimensionMaxLongueur &&
+      article.largeur <= e.zone.dimensionMaxLargeur &&
+      article.hauteur <= e.zone.dimensionMaxHauteur &&
+      article.poids <= e.zone.poidsMax
     );
     return { ...article, compatibles };
   });
@@ -63,12 +67,18 @@ router.post('/affecter', async (req, res) => {
   });
   
   // Double vérification côté serveur
-  const problemes = [];
-  if (article.longueur > emplacement.longueur) problemes.push('Longueur: ' + article.longueur + ' > ' + emplacement.longueur + ' cm');
-  if (article.largeur > emplacement.largeur) problemes.push('Largeur: ' + article.largeur + ' > ' + emplacement.largeur + ' cm');
-  if (article.hauteur > emplacement.hauteur) problemes.push('Hauteur: ' + article.hauteur + ' > ' + emplacement.hauteur + ' cm');
-  if (article.poids > emplacement.poidsMax) problemes.push('Poids: ' + article.poids + ' > ' + emplacement.poidsMax + ' kg');
   
+ const problemes = [];
+  // Vérification emplacement
+  if (article.longueur > emplacement.longueur) problemes.push('Emplacement - Longueur: ' + article.longueur + ' > ' + emplacement.longueur + ' cm');
+  if (article.largeur > emplacement.largeur) problemes.push('Emplacement - Largeur: ' + article.largeur + ' > ' + emplacement.largeur + ' cm');
+  if (article.hauteur > emplacement.hauteur) problemes.push('Emplacement - Hauteur: ' + article.hauteur + ' > ' + emplacement.hauteur + ' cm');
+  if (article.poids > emplacement.poidsMax) problemes.push('Emplacement - Poids: ' + article.poids + ' > ' + emplacement.poidsMax + ' kg');
+  // Vérification zone
+  if (article.longueur > emplacement.zone.dimensionMaxLongueur) problemes.push('Zone ' + emplacement.zone.code + ' - Longueur: ' + article.longueur + ' > ' + emplacement.zone.dimensionMaxLongueur + ' cm');
+  if (article.largeur > emplacement.zone.dimensionMaxLargeur) problemes.push('Zone ' + emplacement.zone.code + ' - Largeur: ' + article.largeur + ' > ' + emplacement.zone.dimensionMaxLargeur + ' cm');
+  if (article.hauteur > emplacement.zone.dimensionMaxHauteur) problemes.push('Zone ' + emplacement.zone.code + ' - Hauteur: ' + article.hauteur + ' > ' + emplacement.zone.dimensionMaxHauteur + ' cm');
+  if (article.poids > emplacement.zone.poidsMax) problemes.push('Zone ' + emplacement.zone.code + ' - Poids: ' + article.poids + ' > ' + emplacement.zone.poidsMax + ' kg');
   if (problemes.length > 0) {
     return res.render('emplacements/erreur-affectation', {
       article,

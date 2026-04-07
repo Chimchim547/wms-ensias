@@ -10,7 +10,9 @@
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2>Inventaires</h2>
-            <a href="/inventaire/planifier" class="btn btn-danger">+ Planifier inventaire</a>
+            <% if (user.role === 'MAGASINIER' || user.role === 'ADMINISTRATEUR') { %>
+                <a href="/inventaire/planifier" class="btn btn-danger">+ Planifier inventaire</a>
+            <% } %>
         </div>
         <table class="table table-striped">
             <thead class="table-dark">
@@ -27,18 +29,27 @@
                         <% if (inv.dateRealisation) { %>
                             <span class="badge bg-success">Validé</span>
                         <% } else { %>
-                            <span class="badge bg-warning">En cours</span>
+                            <% const comptageEffectue = inv.lignes.some(l => l.quantiteReelle > 0); %>
+                            <% if (comptageEffectue) { %>
+                                <span class="badge bg-info">Compté</span>
+                            <% } else { %>
+                                <span class="badge bg-warning">En cours</span>
+                            <% } %>
                         <% } %>
                     </td>
                     <td>
                         <% if (!inv.dateRealisation) { %>
-                            <a href="/inventaire/comptage/<%= inv.id %>" class="btn btn-sm btn-primary">Comptage</a>
-                            <form action="/inventaire/rapprochement/<%= inv.id %>" method="POST" class="d-inline">
-                                <button class="btn btn-sm btn-warning">Rapprochement</button>
-                            </form>
-                            <form action="/inventaire/valider/<%= inv.id %>" method="POST" class="d-inline">
-                                <button class="btn btn-sm btn-success" onclick="return confirm('Valider cet inventaire ?')">Valider</button>
-                            </form>
+                            <% if (user.role === 'MAGASINIER' || user.role === 'ADMINISTRATEUR') { %>
+                                <a href="/inventaire/comptage/<%= inv.id %>" class="btn btn-sm btn-primary">Comptage</a>
+                            <% } %>
+                            <% if (user.role === 'RESPONSABLE_ENTREPOT' || user.role === 'ADMINISTRATEUR') { %>
+                                <form action="/inventaire/rapprochement/<%= inv.id %>" method="POST" class="d-inline">
+                                    <button class="btn btn-sm btn-warning">Rapprochement</button>
+                                </form>
+                                <form action="/inventaire/valider/<%= inv.id %>" method="POST" class="d-inline">
+                                    <button class="btn btn-sm btn-success" onclick="return confirm('Valider cet inventaire ?')">Valider</button>
+                                </form>
+                            <% } %>
                         <% } %>
                         <a href="/inventaire/detail/<%= inv.id %>" class="btn btn-sm btn-outline-info">Détail</a>
                         <a href="/inventaire/pdf/<%= inv.id %>" class="btn btn-sm btn-outline-danger">PDF</a>

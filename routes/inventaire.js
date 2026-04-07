@@ -107,26 +107,47 @@ router.post('/comptage/:id', async (req, res) => {
 router.post('/rapprochement/:id', async (req, res) => {
   const inventaire = await prisma.inventaire.findUnique({
     where: { id: parseInt(req.params.id) },
-    include: { lignes: true }
+    include: { lignes: { include: { article: { include: { mouvements: true } } } } }
   });
   
+  const resultats = [];
+  
   for (const ligne of inventaire.lignes) {
-    const ecart = ligne.quantiteReelle - ligne.quantiteTheorique;
+    // Recalculer le stock théorique depuis les mouvements (source système)
+    const entrees = ligne.article.mouvements.filter(m => m.type === 'ENTREE').reduce((sum, m) => sum + m.quantite, 0);
+    const sorties = ligne.article.mouvements.filter(m => m.type === 'SORTIE').reduce((sum, m) => sum + m.quantite, 0);
+    const stockSysteme = entrees - sorties;
+    
+    const ecart = ligne.quantiteReelle - stockSysteme;
+    
     await prisma.ligneInventaire.update({
       where: { id: ligne.id },
-      data: { ecart }
+      data: { quantiteTheorique: stockSysteme, ecart }
+    });
+    
+    resultats.push({
+      reference: ligne.reference,
+      designation: ligne.designation,
+      stockSysteme,
+      quantiteReelle: ligne.quantiteReelle,
+      ecart,
+      justificatif: ligne.justificatif,
+      cump: ligne.article.coutMoyenPondere
     });
   }
 
+  const totalEcarts = resultats.filter(r => r.ecart !== 0).length;
+  const valeurEcarts = resultats.reduce((sum, r) => sum + (r.ecart * r.cump), 0);
+
   await prisma.notification.create({
     data: {
-      message: `Inventaire #${req.params.id} : rapprochement automatique effectué. Prêt pour validation.`,
+      message: `Inventaire #${req.params.id} : rapprochement automatique effectué. ${totalEcarts} écart(s) détecté(s). Prêt pour validation.`,
       lien: '/inventaire/detail/' + req.params.id,
       destinataireRole: 'RESPONSABLE_ENTREPOT'
     }
   });
 
-  res.redirect(`/inventaire/detail/${req.params.id}`);
+  res.render('inventaire/rapprochement', { inventaire, resultats, totalEcarts, valeurEcarts });
 });
 
 router.post('/valider/:id', async (req, res) => {
