@@ -114,6 +114,11 @@
             border-color: #e74c3c;
             color: white;
         }
+        .emp-partiel {
+            background: rgba(243, 156, 18, 0.3);
+            border-color: #f39c12;
+            color: white;
+        }
         .emp-code {
             font-weight: bold;
             font-size: 1em;
@@ -219,10 +224,13 @@
 
         <% let totalEmp = 0, totalLibre = 0, totalOccupe = 0;
            let zonesReception = [], zonesStockage = [], zonesExpedition = [];
+           let totalPartiel = 0;
            zones.forEach(z => {
                z.emplacements.forEach(e => {
                    totalEmp++;
-                   if(e.articles.length > 0) totalOccupe++; else totalLibre++;
+                   if(e.statut === 'PLEIN') totalOccupe++;
+                   else if(e.statut === 'PARTIEL') { totalPartiel++; totalOccupe++; }
+                   else totalLibre++;
                });
                if(z.type === 'reception') zonesReception.push(z);
                else if(z.type === 'expedition') zonesExpedition.push(z);
@@ -267,15 +275,25 @@
                             <div class="zone-dims">Max: <%= z.dimensionMaxLongueur %>x<%= z.dimensionMaxLargeur %>x<%= z.dimensionMaxHauteur %> cm | <%= z.poidsMax %> kg</div>
                             <div class="emp-grid">
                                 <% z.emplacements.forEach(e => { %>
-                                <div class="emp-box <%= e.articles.length > 0 ? 'emp-occupe' : 'emp-libre' %>">
+                                <div class="emp-box <%= e.statut === 'PLEIN' ? 'emp-occupe' : e.statut === 'PARTIEL' ? 'emp-partiel' : 'emp-libre' %>">
                                     <div class="tooltip-content">
                                         <%= e.code %> | <%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm | Max: <%= e.poidsMax %> kg
-                                        <% if(e.articles.length > 0) { %><br>Article: <%= e.articles[0].reference %> - <%= e.articles[0].designation %><% } %>
+                                        <% if(e.articles.length > 0) { %>
+                                            <br>Article: <%= e.articles[0].reference %> - <%= e.articles[0].designation %>
+                                            <br>Stock: <%= e.stockActuel %> / <%= e.capaciteMax %> (<%= e.tauxRemplissage %>%)
+                                        <% } %>
                                     </div>
                                     <div class="emp-code"><%= e.code %></div>
-                                    <div class="emp-status"><%= e.articles.length > 0 ? '● PLEIN' : '○ LIBRE' %></div>
+                                    <% if (e.statut === 'PLEIN') { %>
+                                        <div class="emp-status">● PLEIN</div>
+                                    <% } else if (e.statut === 'PARTIEL') { %>
+                                        <div class="emp-status">◐ PARTIEL</div>
+                                    <% } else { %>
+                                        <div class="emp-status">○ LIBRE</div>
+                                    <% } %>
                                     <% if(e.articles.length > 0) { %>
                                         <div class="emp-article"><%= e.articles[0].reference %></div>
+                                        <div class="emp-dims"><%= e.stockActuel %>/<%= e.capaciteMax %></div>
                                     <% } %>
                                 </div>
                                 <% }) %>
@@ -307,15 +325,25 @@
                             <div class="zone-dims">Max: <%= z.dimensionMaxLongueur %>x<%= z.dimensionMaxLargeur %>x<%= z.dimensionMaxHauteur %> cm | <%= z.poidsMax %> kg</div>
                             <div class="emp-grid">
                                 <% z.emplacements.forEach(e => { %>
-                                <div class="emp-box <%= e.articles.length > 0 ? 'emp-occupe' : 'emp-libre' %>">
+                                 <div class="emp-box <%= e.statut === 'PLEIN' ? 'emp-occupe' : e.statut === 'PARTIEL' ? 'emp-partiel' : 'emp-libre' %>">
                                     <div class="tooltip-content">
                                         <%= e.code %> | <%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm | Max: <%= e.poidsMax %> kg
-                                        <% if(e.articles.length > 0) { %><br>Article: <%= e.articles[0].reference %> - <%= e.articles[0].designation %><% } %>
+                                        <% if(e.articles.length > 0) { %>
+                                            <br>Article: <%= e.articles[0].reference %> - <%= e.articles[0].designation %>
+                                            <br>Stock: <%= e.stockActuel %> / <%= e.capaciteMax %> (<%= e.tauxRemplissage %>%)
+                                        <% } %>
                                     </div>
                                     <div class="emp-code"><%= e.code %></div>
-                                    <div class="emp-status"><%= e.articles.length > 0 ? '● PLEIN' : '○ LIBRE' %></div>
+                                    <% if (e.statut === 'PLEIN') { %>
+                                        <div class="emp-status">● PLEIN</div>
+                                    <% } else if (e.statut === 'PARTIEL') { %>
+                                        <div class="emp-status">◐ PARTIEL</div>
+                                    <% } else { %>
+                                        <div class="emp-status">○ LIBRE</div>
+                                    <% } %>
                                     <% if(e.articles.length > 0) { %>
                                         <div class="emp-article"><%= e.articles[0].reference %></div>
+                                        <div class="emp-dims"><%= e.stockActuel %>/<%= e.capaciteMax %></div>
                                     <% } %>
                                 </div>
                                 <% }) %>
@@ -346,15 +374,25 @@
                             <div class="zone-dims">Max: <%= z.dimensionMaxLongueur %>x<%= z.dimensionMaxLargeur %>x<%= z.dimensionMaxHauteur %> cm | <%= z.poidsMax %> kg</div>
                             <div class="emp-grid">
                                 <% z.emplacements.forEach(e => { %>
-                                <div class="emp-box <%= e.articles.length > 0 ? 'emp-occupe' : 'emp-libre' %>">
+                                <div class="emp-box <%= e.statut === 'PLEIN' ? 'emp-occupe' : e.statut === 'PARTIEL' ? 'emp-partiel' : 'emp-libre' %>">
                                     <div class="tooltip-content">
                                         <%= e.code %> | <%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm | Max: <%= e.poidsMax %> kg
-                                        <% if(e.articles.length > 0) { %><br>Article: <%= e.articles[0].reference %> - <%= e.articles[0].designation %><% } %>
+                                        <% if(e.articles.length > 0) { %>
+                                            <br>Article: <%= e.articles[0].reference %> - <%= e.articles[0].designation %>
+                                            <br>Stock: <%= e.stockActuel %> / <%= e.capaciteMax %> (<%= e.tauxRemplissage %>%)
+                                        <% } %>
                                     </div>
                                     <div class="emp-code"><%= e.code %></div>
-                                    <div class="emp-status"><%= e.articles.length > 0 ? '● PLEIN' : '○ LIBRE' %></div>
+                                    <% if (e.statut === 'PLEIN') { %>
+                                        <div class="emp-status">● PLEIN</div>
+                                    <% } else if (e.statut === 'PARTIEL') { %>
+                                        <div class="emp-status">◐ PARTIEL</div>
+                                    <% } else { %>
+                                        <div class="emp-status">○ LIBRE</div>
+                                    <% } %>
                                     <% if(e.articles.length > 0) { %>
                                         <div class="emp-article"><%= e.articles[0].reference %></div>
+                                        <div class="emp-dims"><%= e.stockActuel %>/<%= e.capaciteMax %></div>
                                     <% } %>
                                 </div>
                                 <% }) %>
@@ -378,6 +416,10 @@
             <div class="legende-item">
                 <div class="legende-color" style="background: rgba(46,204,113,0.3); border-color: #2ecc71;"></div>
                 <span>○ Libre</span>
+            </div>
+            <div class="legende-item">
+                <div class="legende-color" style="background: rgba(243,156,18,0.3); border-color: #f39c12;"></div>
+                <span>◐ Partiel</span>
             </div>
             <div class="legende-item">
                 <div class="legende-color" style="background: rgba(231,76,60,0.3); border-color: #e74c3c;"></div>
