@@ -29,6 +29,7 @@ model Utilisateur {
   email     String @unique
   motDePasse String
   role      Role
+  lignesPicking LignePicking[]
 }
 
 model Categorie {
@@ -109,7 +110,10 @@ model LigneBonReception {
   quantiteCommandee  Int
   quantiteRecue      Int
   quantiteAcceptee   Int    @default(0)
+  quantiteRefusee    Int    @default(0)
   observations       String?
+  actionNonConforme  String?
+  statutQualite      String  @default("EN_ATTENTE")
   articleId          Int
   article            Article @relation(fields: [articleId], references: [id])
   bonReceptionId     Int
@@ -135,6 +139,9 @@ model Commande {
   prixTotal       Float    @default(0)
   statut          String   @default("EN_ATTENTE")
   dateExpedition  DateTime?
+  commandeParentId Int?
+  commandeParent   Commande?  @relation("BackorderRelation", fields: [commandeParentId], references: [id])
+  backorders       Commande[] @relation("BackorderRelation")
   lignes          LigneCommande[]
   listePicking    ListePicking?
 }
@@ -152,6 +159,7 @@ model LigneCommande {
 model ListePicking {
   id             Int      @id @default(autoincrement())
   dateGeneration DateTime @default(now())
+  modePicking    String   @default("SERIE")
   commandeId     Int      @unique
   commande       Commande @relation(fields: [commandeId], references: [id])
   lignes         LignePicking[]
@@ -165,6 +173,8 @@ model LignePicking {
   article         Article @relation(fields: [articleId], references: [id])
   listePickingId  Int
   listePicking    ListePicking @relation(fields: [listePickingId], references: [id])
+  magasinierId    Int?
+  magasinier      Utilisateur? @relation(fields: [magasinierId], references: [id])
 }
 
 model MouvementStock {

@@ -22,9 +22,32 @@
 
         <% if (commande.listePicking) { %>
             <% const toutPreleve = commande.listePicking.lignes.every(l => l.quantitePrelevee >= l.quantite); %>
-            <% const partiellementPreleve = commande.listePicking.lignes.some(l => l.quantitePrelevee > 0) && !toutPreleve; %>
             <% const isPartielle = commande.statut === 'PARTIELLE'; %>
             <% const toutDeplace = commande.statut === 'AU_QUAI' || commande.statut === 'EXPEDIEE'; %>
+            <% const isParallele = commande.listePicking.modePicking === 'PARALLELE'; %>
+
+            <%
+            const zonesMap = {};
+            commande.listePicking.lignes.forEach(l => {
+                const zoneName = l.article.emplacement ? l.article.emplacement.zone.code : 'NON_AFFECTE';
+                if (!zonesMap[zoneName]) zonesMap[zoneName] = { lignes: [], magasinier: null };
+                zonesMap[zoneName].lignes.push(l);
+                if (l.magasinier) zonesMap[zoneName].magasinier = l.magasinier;
+            });
+
+            const isMAG = user.role === 'MAGASINIER';
+            const mesZones = {};
+            if (isMAG && isParallele) {
+                Object.keys(zonesMap).forEach(zone => {
+                    const lignesAffectees = zonesMap[zone].lignes.filter(l => l.magasinierId === user.id);
+                    if (lignesAffectees.length > 0) {
+                        mesZones[zone] = { lignes: lignesAffectees, magasinier: zonesMap[zone].magasinier };
+                    }
+                });
+            }
+            const toutesAffectees = isParallele && Object.keys(zonesMap).every(z => zonesMap[z].magasinier !== null);
+            const serieAffecte = !isParallele && commande.listePicking.lignes.some(l => l.magasinier !== null);
+            %>
 
             <!-- Étapes visuelles -->
             <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
@@ -56,28 +79,20 @@
                 </div>
             </div>
 
-            <!-- Alerte commande annulée -->
+            <!-- Alertes -->
             <% if (commande.statut === 'ANNULEE') { %>
-            <div class="alert alert-danger">
-                <h5>Commande annulée</h5>
-                <p>Le client a choisi d'annuler cette commande. Les articles doivent être remis en stock.</p>
-            </div>
+            <div class="alert alert-danger"><h5>Commande annulée</h5><p>Les articles doivent être remis en stock.</p></div>
             <% } %>
 
-            <!-- Alerte en attente de stock -->
             <% if (commande.statut === 'EN_ATTENTE_STOCK') { %>
-            <div class="alert alert-warning">
-                <h5>En attente de réapprovisionnement</h5>
-                <p>Le client préfère attendre que tous les articles soient disponibles. La commande sera traitée quand le stock sera complet.</p>
-            </div>
+            <div class="alert alert-warning"><h5>En attente de réapprovisionnement</h5><p>Le client préfère attendre.</p></div>
             <% } %>
 
-            <!-- Alerte commande partielle - décision nécessaire -->
+            <!-- Alerte commande partielle - Responsable Commande -->
             <% if (isPartielle && user.role === 'RESPONSABLE_COMMANDE') { %>
             <div class="alert-partielle mb-4">
                 <h5>⚠ Commande partielle — Décision requise</h5>
-                <p>Le magasinier n'a pas trouvé tous les articles demandés. Veuillez contacter le client <strong><%= commande.nomClient %></strong> (<%= commande.emailClient %>) pour lui communiquer la situation.</p>
-                
+                <p>Veuillez contacter le client <strong><%= commande.nomClient %></strong> (<%= commande.emailClient %>).</p>
                 <h6>Articles manquants :</h6>
                 <table class="table table-sm">
                     <thead><tr><th>Article</th><th>Demandé</th><th>Trouvé</th><th>Manquant</th></tr></thead>
@@ -94,138 +109,336 @@
                         <% }) %>
                     </tbody>
                 </table>
-
-                <p class="mt-3"><strong>Quelle est la décision du client ?</strong></p>
                 <div class="d-flex gap-2">
                     <form action="/commandes/decision/<%= commande.id %>" method="POST">
                         <input type="hidden" name="decision" value="expedier_partiel">
-                        <button class="btn btn-warning">Le client accepte l'expédition partielle</button>
+                        <button class="btn btn-warning">Expédition partielle</button>
                     </form>
                     <form action="/commandes/decision/<%= commande.id %>" method="POST">
                         <input type="hidden" name="decision" value="attendre">
-                        <button class="btn btn-info">Le client préfère attendre la commande complète</button>
+                        <button class="btn btn-info">Attendre</button>
                     </form>
                     <form action="/commandes/decision/<%= commande.id %>" method="POST">
                         <input type="hidden" name="decision" value="annuler">
-                        <button class="btn btn-danger">Le client annule la commande</button>
+                        <button class="btn btn-danger">Annuler</button>
                     </form>
                 </div>
             </div>
             <% } %>
 
-            <!-- Alerte commande partielle vue par le magasinier -->
             <% if (isPartielle && user.role === 'MAGASINIER') { %>
-            <div class="alert alert-warning">
-                <h5>⚠ Commande partielle</h5>
-                <p>Certains articles n'ont pas été trouvés en totalité. Le Responsable Commande va contacter le client pour prendre une décision.</p>
-            </div>
+            <div class="alert alert-warning"><h5>⚠ Commande partielle</h5><p>Le Responsable Commande va contacter le client.</p></div>
             <% } %>
 
-            <!-- Liste de picking -->
-            <h4>Liste de Picking</h4>
+            <!-- Titre picking -->
+            <h4>Liste de Picking 
+                <% if (isParallele) { %>
+                    <span class="badge bg-warning">Mode Parallèle</span>
+                <% } else { %>
+                    <span class="badge bg-info">Mode Série</span>
+                <% } %>
+            </h4>
             <p class="text-muted">Généré le: <%= commande.listePicking.dateGeneration.toLocaleDateString('fr-FR') %></p>
 
-            <% if (commande.statut === 'PICKING' && (user.role === 'MAGASINIER' || user.role === 'ADMINISTRATEUR')) { %>
-            <!-- Formulaire de saisie pour le magasinier -->
-            <form action="/commandes/preparer/<%= commande.id %>" method="POST">
-                <table class="table table-striped">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Article</th>
-                            <th>Référence</th>
-                            <th>Emplacement</th>
-                            <th>Qté demandée</th>
-                            <th>Qté prélevée</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% commande.listePicking.lignes.forEach(l => { %>
-                        <tr>
-                            <input type="hidden" name="ligneIds" value="<%= l.id %>">
-                            <td><%= l.article.designation %></td>
-                            <td><%= l.article.reference %></td>
-                            <td>
-                                <% if (l.article.emplacement) { %>
-                                    <span class="badge bg-info"><%= l.article.emplacement.code %> - Zone <%= l.article.emplacement.zone.code %></span>
-                                <% } else { %>
-                                    <span class="badge bg-warning">Non affecté</span>
-                                <% } %>
-                            </td>
-                            <td><strong><%= l.quantite %></strong></td>
-                            <td>
-                                <input type="number" name="quantitesPrelevees" class="form-control" 
-                                    value="<%= l.quantite %>" min="0" max="<%= l.quantite %>" required
-                                    style="max-width: 100px;">
-                            </td>
-                        </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
-                <button type="submit" class="btn btn-warning" onclick="return confirm('Confirmer les quantités prélevées ?')">
-                    Valider le prélèvement
-                </button>
+            <!-- ============================================ -->
+            <!-- MODE PARALLELE - RESPONSABLE COMMANDE : AFFECTATION -->
+            <!-- ============================================ -->
+            <% if (isParallele && (user.role === 'RESPONSABLE_COMMANDE' || user.role === 'ADMINISTRATEUR') && commande.statut === 'PICKING') { %>
+            
+            <% if (!toutesAffectees) { %>
+            <div class="alert alert-info">
+                <strong>Affectez un magasinier à chaque zone</strong> puis cliquez "Affecter".
+            </div>
+            <form action="/commandes/affecter-picking/<%= commande.id %>" method="POST">
+                <% Object.keys(zonesMap).forEach(zone => { %>
+                <div class="card mb-3">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Zone: <%= zone %> — <%= zonesMap[zone].lignes.length %> article(s)</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="hidden" name="zones" value="<%= zone %>">
+                            <select name="magasinierIds" class="form-select form-select-sm" style="width: 200px;" required>
+                                <option value="">-- Choisir magasinier --</option>
+                                <% magasiniers.forEach(m => { %>
+                                    <option value="<%= m.id %>" <%= zonesMap[zone].magasinier && zonesMap[zone].magasinier.id === m.id ? 'selected' : '' %>><%= m.prenom %> <%= m.nom %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-secondary">
+                                <tr><th>Article</th><th>Référence</th><th>Emplacement</th><th>Qté</th></tr>
+                            </thead>
+                            <tbody>
+                                <% zonesMap[zone].lignes.forEach(l => { %>
+                                <tr>
+                                    <td><%= l.article.designation %></td>
+                                    <td><%= l.article.reference %></td>
+                                    <td><% if (l.article.emplacement) { %><span class="badge bg-info"><%= l.article.emplacement.code %></span><% } else { %><span class="badge bg-warning">Non affecté</span><% } %></td>
+                                    <td><strong><%= l.quantite %></strong></td>
+                                </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <% }) %>
+                <button type="submit" class="btn btn-primary btn-lg">Affecter les magasiniers</button>
             </form>
 
             <% } else { %>
-            <!-- Affichage lecture seule -->
+            <div class="alert alert-success"><strong>✓ Magasiniers affectés.</strong> En attente du prélèvement.</div>
+            <% Object.keys(zonesMap).forEach(zone => { %>
+            <div class="card mb-3">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Zone: <%= zone %> — <%= zonesMap[zone].lignes.length %> article(s)</h5>
+                    <span class="badge bg-success"><%= zonesMap[zone].magasinier ? zonesMap[zone].magasinier.prenom + ' ' + zonesMap[zone].magasinier.nom : 'Non affecté' %></span>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0">
+                        <thead class="table-secondary">
+                            <tr><th>Article</th><th>Référence</th><th>Emplacement</th><th>Qté</th><th>Prélevée</th><th>Statut</th></tr>
+                        </thead>
+                        <tbody>
+                            <% zonesMap[zone].lignes.forEach(l => { %>
+                            <tr>
+                                <td><%= l.article.designation %></td>
+                                <td><%= l.article.reference %></td>
+                                <td><% if (l.article.emplacement) { %><span class="badge bg-info"><%= l.article.emplacement.code %></span><% } else { %><span class="badge bg-warning">Non affecté</span><% } %></td>
+                                <td><%= l.quantite %></td>
+                                <td><%= l.quantitePrelevee %></td>
+                                <td>
+                                    <% if (l.quantitePrelevee >= l.quantite) { %><span class="badge bg-success">Complet ✓</span>
+                                    <% } else if (l.quantitePrelevee > 0) { %><span class="badge bg-warning">Partiel</span>
+                                    <% } else { %><span class="badge bg-secondary">En attente</span><% } %>
+                                </td>
+                            </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <% }) %>
+            <% } %>
+            <% } %>
+
+            <!-- ============================================ -->
+            <!-- MODE PARALLELE - MAGASINIER : SA ZONE UNIQUEMENT -->
+            <!-- ============================================ -->
+            <% if (isParallele && isMAG && commande.statut === 'PICKING') { %>
+                <% if (Object.keys(mesZones).length === 0) { %>
+                <div class="alert alert-info"><strong>Aucune zone ne vous est affectée</strong> pour cette commande.</div>
+                <% } else { %>
+                <div class="alert alert-success"><strong>Vos zones affectées :</strong> <%= Object.keys(mesZones).join(', ') %></div>
+                <form action="/commandes/preparer/<%= commande.id %>" method="POST">
+                    <% Object.keys(mesZones).forEach(zone => { %>
+                    <div class="card mb-3">
+                        <div class="card-header bg-dark text-white">
+                            <h5 class="mb-0">Votre zone: <%= zone %> — <%= mesZones[zone].lignes.length %> article(s)</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-striped mb-0">
+                                <thead class="table-secondary">
+                                    <tr><th>Article</th><th>Référence</th><th>Emplacement</th><th>Qté demandée</th><th>Qté prélevée</th></tr>
+                                </thead>
+                                <tbody>
+                                    <% mesZones[zone].lignes.forEach(l => { %>
+                                    <tr>
+                                        <input type="hidden" name="ligneIds" value="<%= l.id %>">
+                                        <td><%= l.article.designation %></td>
+                                        <td><%= l.article.reference %></td>
+                                        <td><% if (l.article.emplacement) { %><span class="badge bg-info"><%= l.article.emplacement.code %></span><% } else { %><span class="badge bg-warning">Non affecté</span><% } %></td>
+                                        <td><strong><%= l.quantite %></strong></td>
+                                        <td><input type="number" name="quantitesPrelevees" class="form-control" value="<%= l.quantite %>" min="0" max="<%= l.quantite %>" required style="max-width: 100px;"></td>
+                                    </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <% }) %>
+                    <button type="submit" class="btn btn-warning" onclick="return confirm('Confirmer les quantités prélevées ?')">Valider le prélèvement</button>
+                </form>
+                <% } %>
+            <% } %>
+
+            <!-- ============================================ -->
+            <!-- MODE SERIE - RESPONSABLE COMMANDE : AFFECTATION -->
+            <!-- ============================================ -->
+            <% if (!isParallele && (user.role === 'RESPONSABLE_COMMANDE' || user.role === 'ADMINISTRATEUR') && commande.statut === 'PICKING') { %>
+            
+            <% if (!serieAffecte) { %>
+            <div class="alert alert-info"><strong>Affectez un magasinier</strong> pour préparer cette commande.</div>
+            <form action="/commandes/affecter-picking/<%= commande.id %>" method="POST">
+                <div class="card mb-3">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Commande complète — <%= commande.listePicking.lignes.length %> article(s)</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="text-white mb-0">Magasinier :</label>
+                            <select name="magasinierSerie" class="form-select form-select-sm" style="width: 200px;" required>
+                                <option value="">-- Choisir magasinier --</option>
+                                <% magasiniers.forEach(m => { %>
+                                    <option value="<%= m.id %>"><%= m.prenom %> <%= m.nom %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-secondary">
+                                <tr><th>Article</th><th>Référence</th><th>Emplacement</th><th>Qté</th></tr>
+                            </thead>
+                            <tbody>
+                                <% commande.listePicking.lignes.forEach(l => { %>
+                                <tr>
+                                    <td><%= l.article.designation %></td>
+                                    <td><%= l.article.reference %></td>
+                                    <td><% if (l.article.emplacement) { %><span class="badge bg-info"><%= l.article.emplacement.code %> - Zone <%= l.article.emplacement.zone.code %></span><% } else { %><span class="badge bg-warning">Non affecté</span><% } %></td>
+                                    <td><strong><%= l.quantite %></strong></td>
+                                </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg">Affecter le magasinier</button>
+            </form>
+
+            <% } else { %>
+            <div class="alert alert-success">
+                <strong>✓ Magasinier affecté :</strong> <%= commande.listePicking.lignes[0].magasinier ? commande.listePicking.lignes[0].magasinier.prenom + ' ' + commande.listePicking.lignes[0].magasinier.nom : '' %> — En attente du prélèvement.
+            </div>
             <table class="table table-striped">
                 <thead class="table-dark">
-                    <tr>
-                        <th>Article</th>
-                        <th>Référence</th>
-                        <th>Emplacement</th>
-                        <th>Qté demandée</th>
-                        <th>Qté prélevée</th>
-                        <th>Statut</th>
-                    </tr>
+                    <tr><th>Article</th><th>Référence</th><th>Emplacement</th><th>Qté demandée</th><th>Qté prélevée</th><th>Statut</th></tr>
                 </thead>
                 <tbody>
                     <% commande.listePicking.lignes.forEach(l => { %>
                     <tr class="<%= l.quantitePrelevee < l.quantite && l.quantitePrelevee > 0 ? 'table-warning' : '' %>">
                         <td><%= l.article.designation %></td>
                         <td><%= l.article.reference %></td>
-                        <td>
-                            <% if (l.article.emplacement) { %>
-                                <span class="badge bg-info"><%= l.article.emplacement.code %> - Zone <%= l.article.emplacement.zone.code %></span>
-                            <% } else { %>
-                                <span class="badge bg-warning">Quai / Non affecté</span>
-                            <% } %>
-                        </td>
+                        <td><% if (l.article.emplacement) { %><span class="badge bg-info"><%= l.article.emplacement.code %> - Zone <%= l.article.emplacement.zone.code %></span><% } else { %><span class="badge bg-warning">Non affecté</span><% } %></td>
                         <td><%= l.quantite %></td>
                         <td><%= l.quantitePrelevee %></td>
                         <td>
-                            <% if (l.quantitePrelevee >= l.quantite) { %>
-                                <span class="badge bg-success">Complet ✓</span>
-                            <% } else if (l.quantitePrelevee > 0) { %>
-                                <span class="badge bg-warning">Partiel ⚠</span>
-                            <% } else { %>
-                                <span class="badge bg-danger">Non prélevé</span>
-                            <% } %>
+                            <% if (l.quantitePrelevee >= l.quantite) { %><span class="badge bg-success">Complet ✓</span>
+                            <% } else if (l.quantitePrelevee > 0) { %><span class="badge bg-warning">Partiel ⚠</span>
+                            <% } else { %><span class="badge bg-secondary">En attente</span><% } %>
                         </td>
                     </tr>
                     <% }) %>
                 </tbody>
             </table>
             <% } %>
+            <% } %>
+
+            <!-- ============================================ -->
+            <!-- MODE SERIE - MAGASINIER : SES ARTICLES AFFECTES -->
+            <!-- ============================================ -->
+            <% if (!isParallele && commande.statut === 'PICKING' && isMAG) { %>
+            <%
+            const mesLignesSerie = commande.listePicking.lignes.filter(l => l.magasinierId === user.id);
+            %>
+            <% if (mesLignesSerie.length === 0) { %>
+            <div class="alert alert-info"><strong>Cette commande ne vous est pas affectée.</strong> Attendez l'affectation du Responsable Commande.</div>
+            <% } else { %>
+            <div class="alert alert-success"><strong>Cette commande vous est affectée.</strong> Prélevez les <%= mesLignesSerie.length %> article(s).</div>
+            <form action="/commandes/preparer/<%= commande.id %>" method="POST">
+                <table class="table table-striped">
+                    <thead class="table-dark">
+                        <tr><th>Article</th><th>Référence</th><th>Emplacement</th><th>Qté demandée</th><th>Qté prélevée</th></tr>
+                    </thead>
+                    <tbody>
+                        <% mesLignesSerie.forEach(l => { %>
+                        <tr>
+                            <input type="hidden" name="ligneIds" value="<%= l.id %>">
+                            <td><%= l.article.designation %></td>
+                            <td><%= l.article.reference %></td>
+                            <td><% if (l.article.emplacement) { %><span class="badge bg-info"><%= l.article.emplacement.code %> - Zone <%= l.article.emplacement.zone.code %></span><% } else { %><span class="badge bg-warning">Non affecté</span><% } %></td>
+                            <td><strong><%= l.quantite %></strong></td>
+                            <td><input type="number" name="quantitesPrelevees" class="form-control" value="<%= l.quantite %>" min="0" max="<%= l.quantite %>" required style="max-width: 100px;"></td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+                <button type="submit" class="btn btn-warning" onclick="return confirm('Confirmer les quantités prélevées ?')">Valider le prélèvement</button>
+            </form>
+            <% } %>
+            <% } %>
+
+            <!-- ============================================ -->
+            <!-- LECTURE SEULE APRES PREPARATION (tous rôles) -->
+            <!-- ============================================ -->
+            <% if (commande.statut !== 'PICKING' && commande.statut !== 'EN_ATTENTE') { %>
+                <% if (isParallele) { %>
+                    <% Object.keys(zonesMap).forEach(zone => { %>
+                    <div class="card mb-3">
+                        <div class="card-header bg-dark text-white d-flex justify-content-between">
+                            <h5 class="mb-0">Zone: <%= zone %></h5>
+                            <% if (zonesMap[zone].magasinier) { %><span class="badge bg-success"><%= zonesMap[zone].magasinier.prenom %> <%= zonesMap[zone].magasinier.nom %></span><% } %>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-striped mb-0">
+                                <thead class="table-secondary">
+                                    <tr><th>Article</th><th>Référence</th><th>Emplacement</th><th>Qté</th><th>Prélevée</th><th>Statut</th></tr>
+                                </thead>
+                                <tbody>
+                                    <% zonesMap[zone].lignes.forEach(l => { %>
+                                    <tr class="<%= l.quantitePrelevee < l.quantite && l.quantitePrelevee > 0 ? 'table-warning' : '' %>">
+                                        <td><%= l.article.designation %></td>
+                                        <td><%= l.article.reference %></td>
+                                        <td><% if (l.article.emplacement) { %><span class="badge bg-info"><%= l.article.emplacement.code %></span><% } else { %><span class="badge bg-warning">Non affecté</span><% } %></td>
+                                        <td><%= l.quantite %></td>
+                                        <td><%= l.quantitePrelevee %></td>
+                                        <td>
+                                            <% if (l.quantitePrelevee >= l.quantite) { %><span class="badge bg-success">Complet ✓</span>
+                                            <% } else if (l.quantitePrelevee > 0) { %><span class="badge bg-warning">Partiel</span>
+                                            <% } else { %><span class="badge bg-danger">Non prélevé</span><% } %>
+                                        </td>
+                                    </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <% }) %>
+                <% } else { %>
+                <table class="table table-striped">
+                    <thead class="table-dark">
+                        <tr><th>Article</th><th>Référence</th><th>Emplacement</th><th>Qté</th><th>Prélevée</th><th>Statut</th></tr>
+                    </thead>
+                    <tbody>
+                        <% commande.listePicking.lignes.forEach(l => { %>
+                        <tr class="<%= l.quantitePrelevee < l.quantite && l.quantitePrelevee > 0 ? 'table-warning' : '' %>">
+                            <td><%= l.article.designation %></td>
+                            <td><%= l.article.reference %></td>
+                            <td><% if (l.article.emplacement) { %><span class="badge bg-info"><%= l.article.emplacement.code %> - Zone <%= l.article.emplacement.zone.code %></span><% } else { %><span class="badge bg-warning">Non affecté</span><% } %></td>
+                            <td><%= l.quantite %></td>
+                            <td><%= l.quantitePrelevee %></td>
+                            <td>
+                                <% if (l.quantitePrelevee >= l.quantite) { %><span class="badge bg-success">Complet ✓</span>
+                                <% } else if (l.quantitePrelevee > 0) { %><span class="badge bg-warning">Partiel ⚠</span>
+                                <% } else { %><span class="badge bg-danger">Non prélevé</span><% } %>
+                            </td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+                <% } %>
+            <% } %>
 
             <!-- Boutons d'action -->
             <div class="d-flex gap-2 mt-3">
                 <% if (commande.statut === 'PREPARE' && (user.role === 'MAGASINIER' || user.role === 'ADMINISTRATEUR')) { %>
                     <form action="/commandes/deplacer-quai/<%= commande.id %>" method="POST">
-                        <button class="btn btn-info" onclick="return confirm('Déplacer les articles vers le quai ?')">
-                            3. Déplacer vers quai d'expédition
-                        </button>
+                        <button class="btn btn-info" onclick="return confirm('Déplacer les articles vers le quai ?')">3. Déplacer vers quai</button>
                     </form>
                 <% } %>
-
                 <% if (commande.statut === 'AU_QUAI' && (user.role === 'RESPONSABLE_COMMANDE' || user.role === 'ADMINISTRATEUR')) { %>
                     <form action="/commandes/expedier/<%= commande.id %>" method="POST">
-                        <button class="btn btn-success" onclick="return confirm('Expédier cette commande ?')">
-                            4. Expédier la commande
-                        </button>
+                        <button class="btn btn-success" onclick="return confirm('Expédier cette commande ?')">4. Expédier</button>
                     </form>
                 <% } %>
-
                 <a href="/commandes/picking-pdf/<%= commande.id %>" class="btn btn-outline-danger">Picking PDF</a>
                 <a href="<%= user.role === 'MAGASINIER' ? '/commandes/preparation' : '/commandes' %>" class="btn btn-secondary">Retour</a>
             </div>

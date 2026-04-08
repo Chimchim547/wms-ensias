@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Chargement Camion</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <h2>🚚 Chargement Camion</h2>
+        <p class="text-muted">Sélectionnez les commandes au quai à charger, définissez l'ordre de livraison et le mode de chargement.</p>
+
+        <% if (commandes.length === 0) { %>
+        <div class="alert alert-success">
+            <strong>Aucune commande au quai.</strong> Toutes les commandes ont été expédiées.
+        </div>
+        <a href="/commandes" class="btn btn-secondary">Retour aux commandes</a>
+        <% } else { %>
+
+        <div class="alert alert-info">
+            <strong><%= commandes.length %> commande(s) au quai</strong> prêtes à être chargées.
+        </div>
+        <div class="card mb-3">
+            <div class="card-header bg-dark text-white"><h5 class="mb-0">🚛 Informations Camion</h5></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Immatriculation</label>
+                        <input type="text" name="immatriculation" class="form-control" placeholder="ex: 12345-A-12" required form="formChargement">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Nom du chauffeur</label>
+                        <input type="text" name="chauffeur" class="form-control" placeholder="ex: Mohamed Alami" required form="formChargement">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Poids max (kg)</label>
+                        <input type="number" name="poidsMax" class="form-control" id="poidsMaxCamion" placeholder="ex: 5000" required form="formChargement">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Poids sélectionné</label>
+                        <div class="form-control bg-light" id="poidsTotal">0 kg</div>
+                    </div>
+                </div>
+                <div id="alertePoids" class="alert alert-danger mt-2" style="display:none;">
+                    <strong>⚠ Dépassement de capacité !</strong> Le poids total dépasse la capacité du camion.
+                </div>
+            </div>
+        </div>
+
+        <form action="/commandes/expedier-camion" method="POST" id="formChargement">
+            <div class="mb-3">
+                <label class="form-label"><strong>Mode de chargement :</strong></label>
+                <div class="d-flex gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="mode" value="LIFO" id="modeLIFO" checked>
+                        <label class="form-check-label" for="modeLIFO">
+                            <strong>LIFO</strong> — Dernier chargé = Premier livré <span class="badge bg-success">Recommandé</span>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="mode" value="FIFO" id="modeFIFO">
+                        <label class="form-check-label" for="modeFIFO">
+                            <strong>FIFO</strong> — Premier chargé = Premier livré
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <table class="table table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Sélectionner</th>
+                        <th>Commande</th>
+                        <th>Client</th>
+                        <th>Adresse</th>
+                        <th>Articles</th>
+                        <th>Total</th>
+                        <th>Poids</th>
+                        <th>Ordre de livraison</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% commandes.forEach((c, index) => { %>
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input cmd-check" value="<%= c.id %>" data-index="<%= index %>">
+                            <input type="hidden" name="commandeIds" value="<%= c.id %>" disabled class="cmd-hidden-<%= index %>">
+                        </td>
+                        <td><strong><%= c.numero %></strong></td>
+                        <td><%= c.nomClient %></td>
+                        <td><%= c.adresseClient %></td>
+                        <td><%= c.lignes.length %></td>
+                        <td><%= c.prixTotal.toFixed(2) %> DH</td>
+                        <td>
+                            <% let poidsCmd = 0; c.lignes.forEach(l => { poidsCmd += (l.quantitePreparee || l.quantite) * l.article.poids; }); %>
+                            <span class="poids-cmd" data-poids="<%= poidsCmd %>"><%= poidsCmd.toFixed(1) %> kg</span>
+                        </td>
+                        <td>
+                            <input type="number" name="ordresLivraison" class="form-control form-control-sm ordre-input" 
+                                value="<%= index + 1 %>" min="1" max="<%= commandes.length %>" disabled
+                                style="width: 70px;" id="ordre-<%= index %>">
+                        </td>
+                    </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+
+            <div id="resumeChargement" class="card mb-3" style="display:none;">
+                <div class="card-body">
+                    <h5>Résumé du chargement</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Commandes sélectionnées :</strong> <span id="nbSelected">0</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Mode :</strong> <span id="modeSelected">LIFO</span>
+                        </div>
+                    </div>
+                    <div class="mt-2" id="ordrePreview"></div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-success btn-lg" id="btnExpedier" disabled onclick="return confirm('Expédier toutes les commandes sélectionnées ?')">
+                🚚 Expédier le camion
+            </button>
+            <a href="/commandes" class="btn btn-secondary">Annuler</a>
+        </form>
+        <% } %>
+    </div>
+
+    <script>
+    const checkboxes = document.querySelectorAll('.cmd-check');
+    const modeRadios = document.querySelectorAll('input[name="mode"]');
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            const index = this.dataset.index;
+            const hidden = document.querySelector('.cmd-hidden-' + index);
+            const ordre = document.getElementById('ordre-' + index);
+            
+            if (this.checked) {
+                hidden.disabled = false;
+                ordre.disabled = false;
+            } else {
+                hidden.disabled = true;
+                ordre.disabled = true;
+            }
+            updateResume();
+        });
+    });
+
+    modeRadios.forEach(r => r.addEventListener('change', updateResume));
+    
+    function updatePoids() {
+        const selected = document.querySelectorAll('.cmd-check:checked');
+        let poidsTotal = 0;
+        selected.forEach(cb => {
+            const row = cb.closest('tr');
+            const poids = parseFloat(row.querySelector('.poids-cmd').dataset.poids);
+            poidsTotal += poids;
+        });
+        
+        document.getElementById('poidsTotal').textContent = poidsTotal.toFixed(1) + ' kg';
+        
+        const poidsMax = parseFloat(document.getElementById('poidsMaxCamion').value) || 0;
+        const alerte = document.getElementById('alertePoids');
+        const btn = document.getElementById('btnExpedier');
+        
+        if (poidsMax > 0 && poidsTotal > poidsMax) {
+            alerte.style.display = 'block';
+            document.getElementById('poidsTotal').classList.add('text-danger');
+            document.getElementById('poidsTotal').classList.remove('text-success');
+            btn.disabled = true;
+        } else {
+            alerte.style.display = 'none';
+            document.getElementById('poidsTotal').classList.remove('text-danger');
+            if (poidsTotal > 0) document.getElementById('poidsTotal').classList.add('text-success');
+            // btn sera activé par updateResume si commandes sélectionnées
+        }
+    }
+
+    document.getElementById('poidsMaxCamion').addEventListener('input', function() {
+        updatePoids();
+        updateResume();
+    });
+    function updateResume() {
+        const selected = document.querySelectorAll('.cmd-check:checked');
+        const resume = document.getElementById('resumeChargement');
+        const btn = document.getElementById('btnExpedier');
+        
+        if (selected.length === 0) {
+            resume.style.display = 'none';
+            btn.disabled = true;
+            return;
+        }
+
+        resume.style.display = 'block';
+        updatePoids();
+        const poidsMax = parseFloat(document.getElementById('poidsMaxCamion').value) || 0;
+        const poidsTotal = parseFloat(document.getElementById('poidsTotal').textContent) || 0;
+        btn.disabled = (poidsMax > 0 && poidsTotal > poidsMax);
+        document.getElementById('nbSelected').textContent = selected.length;
+        
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        document.getElementById('modeSelected').textContent = mode;
+
+        // Collecter les commandes sélectionnées avec leur ordre
+        const cmds = [];
+        selected.forEach(cb => {
+            const row = cb.closest('tr');
+            const numero = row.cells[1].textContent.trim();
+            const client = row.cells[2].textContent.trim();
+            const index = cb.dataset.index;
+            const ordre = parseInt(document.getElementById('ordre-' + index).value);
+            cmds.push({ numero, client, ordre });
+        });
+
+        // Trier par ordre de livraison
+        cmds.sort((a, b) => a.ordre - b.ordre);
+
+        let html = '<strong>Ordre de livraison :</strong> ';
+        html += cmds.map((c, i) => (i + 1) + '. ' + c.numero + ' (' + c.client + ')').join(' → ');
+        
+        html += '<br><strong>Ordre de chargement (' + mode + ') :</strong> ';
+        const chargement = mode === 'LIFO' ? [...cmds].reverse() : [...cmds];
+        html += chargement.map((c, i) => (i + 1) + '. ' + c.numero + ' (' + c.client + ')').join(' → ');
+        
+        document.getElementById('ordrePreview').innerHTML = html;
+    }
+    </script>
+</body>
+</html>

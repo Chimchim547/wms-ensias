@@ -74,20 +74,20 @@ router.get('/stock', async (req, res) => {
   const alertes = articlesWithStock.filter(a => a.enAlerte);
   res.render('articles/stock', { articles: articlesWithStock, alertes });
 });
-// Taux de roulement
+
+// Taux de rotation
 router.get('/roulement', async (req, res) => {
   const articles = await prisma.article.findMany({
     include: { categorie: true, mouvements: true }
   });
   
-  const articlesWithRoulement = articles.map(article => {
+  const articlesWithRotation = articles.map(article => {
     const entrees = article.mouvements.filter(m => m.type === 'ENTREE').reduce((sum, m) => sum + m.quantite, 0);
     const sorties = article.mouvements.filter(m => m.type === 'SORTIE').reduce((sum, m) => sum + m.quantite, 0);
     const stockActuel = entrees - sorties;
     const stockMoyen = (entrees + stockActuel) / 2;
-    const coutSorties = sorties * article.coutMoyenPondere;
-    const valeurStockMoyen = stockMoyen * article.coutMoyenPondere;
-    const tauxRoulement = valeurStockMoyen > 0 ? (coutSorties / valeurStockMoyen) : 0;
+    const tauxRotation = stockMoyen > 0 ? (sorties / stockMoyen) : 0;
+    const couverture = tauxRotation > 0 ? (365 / tauxRotation).toFixed(0) : 'N/A';
     
     return {
       ...article,
@@ -95,20 +95,22 @@ router.get('/roulement', async (req, res) => {
       entrees,
       sorties,
       stockMoyen: stockMoyen.toFixed(1),
-      coutSorties: coutSorties.toFixed(2),
-      tauxRoulement: tauxRoulement.toFixed(2)
+      tauxRotation: tauxRotation.toFixed(2),
+      couverture
     };
   });
   
-  // Calcul global
-  const totalCoutSorties = articlesWithRoulement.reduce((sum, a) => sum + parseFloat(a.coutSorties), 0);
-  const totalValeurStock = articlesWithRoulement.reduce((sum, a) => sum + (parseFloat(a.stockMoyen) * a.coutMoyenPondere), 0);
-  const tauxGlobal = totalValeurStock > 0 ? (totalCoutSorties / totalValeurStock) : 0;
+  const totalSorties = articlesWithRotation.reduce((sum, a) => sum + a.sorties, 0);
+  const totalStockMoyen = articlesWithRotation.reduce((sum, a) => sum + parseFloat(a.stockMoyen), 0);
+  const tauxGlobal = totalStockMoyen > 0 ? (totalSorties / totalStockMoyen).toFixed(2) : '0.00';
+  const couvertureGlobale = parseFloat(tauxGlobal) > 0 ? (365 / parseFloat(tauxGlobal)).toFixed(0) : 'N/A';
+  const totalCoutSorties = articlesWithRotation.reduce((sum, a) => sum + (a.sorties * a.coutMoyenPondere), 0).toFixed(2);
   
   res.render('articles/roulement', { 
-    articles: articlesWithRoulement, 
-    tauxGlobal: tauxGlobal.toFixed(2),
-    totalCoutSorties: totalCoutSorties.toFixed(2)
+    articles: articlesWithRotation, 
+    tauxGlobal,
+    couvertureGlobale,
+    totalCoutSorties
   });
 });
 

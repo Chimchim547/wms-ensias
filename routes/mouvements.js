@@ -39,7 +39,23 @@ router.get('/transfert', async (req, res) => {
     include: { zone: true, articles: true }
   });
   const emplacementsLibres = emplacements.filter(e => e.articles.length === 0);
-  res.render('mouvements/transfert', { articles, emplacements: emplacementsLibres });
+  
+  // Pour chaque article, trouver les emplacements compatibles
+  const articlesWithCompatible = articles.map(article => {
+    const compatibles = emplacementsLibres.filter(e => 
+      article.longueur <= e.longueur &&
+      article.largeur <= e.largeur &&
+      article.hauteur <= e.hauteur &&
+      article.poids <= e.poidsMax &&
+      article.longueur <= e.zone.dimensionMaxLongueur &&
+      article.largeur <= e.zone.dimensionMaxLargeur &&
+      article.hauteur <= e.zone.dimensionMaxHauteur &&
+      article.poids <= e.zone.poidsMax
+    );
+    return { ...article, compatibles };
+  });
+  
+  res.render('mouvements/transfert', { articles: articlesWithCompatible, emplacements: emplacementsLibres });
 });
 
 router.post('/transfert', async (req, res) => {

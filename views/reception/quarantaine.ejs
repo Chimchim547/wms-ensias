@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Quarantaine</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <h2>🟡 Zone Quarantaine</h2>
+        <p class="text-muted">Articles bloqués en attente de décision après contrôle qualité non conforme.</p>
+
+        <% if (lignes.length === 0) { %>
+        <div class="alert alert-success">
+            <strong>Aucun article en quarantaine.</strong> Tous les contrôles qualité sont traités.
+        </div>
+        <% } else { %>
+        <div class="alert alert-warning">
+            <strong><%= lignes.length %> article(s) en quarantaine.</strong> Inspectez et prenez une décision pour chacun.
+        </div>
+
+        <% lignes.forEach(l => { %>
+        <div class="card mb-3 border-warning">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><%= l.article.reference %> - <%= l.article.designation %></h5>
+                <span class="badge bg-danger"><%= l.quantiteRefusee %> unité(s) bloquée(s)</span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <strong>Bon de réception :</strong><br>
+                        <%= l.bonReception.numero %>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Fournisseur :</strong><br>
+                        <%= l.bonReception.fournisseur.nom %>
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Qté reçue :</strong><br>
+                        <%= l.quantiteRecue %>
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Qté acceptée :</strong><br>
+                        <%= l.quantiteAcceptee %>
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Qté refusée :</strong><br>
+                        <span class="text-danger"><strong><%= l.quantiteRefusee %></strong></span>
+                    </div>
+                </div>
+                <% if (l.observations) { %>
+                <p class="text-muted"><strong>Observations :</strong> <%= l.observations %></p>
+                <% } %>
+
+                <hr>
+                <% if (user.role === 'RESPONSABLE_ENTREPOT' || user.role === 'ADMINISTRATEUR') { %>
+                <h6>Décision après inspection :</h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <form action="/reception/quarantaine/decision/<%= l.id %>" method="POST">
+                            <input type="hidden" name="decision" value="accepter">
+                            <div class="mb-2">
+                                <input type="text" name="commentaire" class="form-control form-control-sm" placeholder="Commentaire (optionnel)">
+                            </div>
+                            <button class="btn btn-success btn-sm w-100" onclick="return confirm('Accepter ces articles et les mettre en stock ?')">
+                                ✅ Accepter → Stock
+                            </button>
+                        </form>
+                    </div>
+                    <div class="col-md-4">
+                        <form action="/reception/quarantaine/decision/<%= l.id %>" method="POST">
+                            <input type="hidden" name="decision" value="retour">
+                            <div class="mb-2">
+                                <input type="text" name="commentaire" class="form-control form-control-sm" placeholder="Motif du retour">
+                            </div>
+                            <button class="btn btn-warning btn-sm w-100" onclick="return confirm('Retourner ces articles au fournisseur ?')">
+                                🔄 Retour fournisseur
+                            </button>
+                        </form>
+                    </div>
+                    <div class="col-md-4">
+                        <form action="/reception/quarantaine/decision/<%= l.id %>" method="POST">
+                            <input type="hidden" name="decision" value="rejeter">
+                            <div class="mb-2">
+                                <input type="text" name="commentaire" class="form-control form-control-sm" placeholder="Motif de rejet" required>
+                            </div>
+                            <button class="btn btn-danger btn-sm w-100" onclick="return confirm('Rejeter et détruire ces articles ? Cette action est irréversible.')">
+                                ❌ Rejeter / Détruire
+                            </button>
+                        </form>
+                   </div>
+                </div>
+                <% } else { %>
+                <p class="text-muted">En attente de décision du Responsable Entrepôt.</p>
+                <% } %>
+            </div>
+        </div>
+        <% }) %>
+        <% } %>
+
+        <a href="/reception" class="btn btn-secondary">Retour aux réceptions</a>
+    </div>
+</body>
+</html>

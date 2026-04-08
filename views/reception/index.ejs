@@ -12,20 +12,79 @@
             <h2>Bons de Réception</h2>
             <div>
                 <a href="/reception/fournisseurs" class="btn btn-outline-warning">Fournisseurs</a>
+                <a href="/reception/quarantaine" class="btn btn-outline-danger">Quarantaine</a>
                 <a href="/reception/create" class="btn btn-warning">+ Nouveau bon</a>
             </div>
         </div>
         <table class="table table-striped">
             <thead class="table-dark">
-                <tr><th>Numéro</th><th>Date</th><th>Fournisseur</th><th>Lignes</th><th>Contrôle</th><th>Actions</th></tr>
+                <tr>
+                    <th>Numéro</th>
+                    <th>Date</th>
+                    <th>Fournisseur</th>
+                    <th>Lignes</th>
+                    <th>Écart quantité</th>
+                    <th>Contrôle</th>
+                    <th>Actions</th>
+                </tr>
             </thead>
             <tbody>
                 <% bons.forEach(b => { %>
-                <tr>
+                <%
+                let totalCmd = 0, totalRec = 0, nbManquant = 0, nbSurplus = 0;
+                b.lignes.forEach(l => {
+                    totalCmd += l.quantiteCommandee;
+                    totalRec += l.quantiteRecue;
+                    if (l.quantiteRecue < l.quantiteCommandee) nbManquant++;
+                    if (l.quantiteRecue > l.quantiteCommandee) nbSurplus++;
+                });
+                const ecart = totalRec - totalCmd;
+                %>
+                <tr class="<%= nbManquant > 0 ? 'table-warning' : nbSurplus > 0 ? 'table-info' : '' %>">
                     <td><%= b.numero %></td>
                     <td><%= b.date.toLocaleDateString('fr-FR') %></td>
                     <td><%= b.fournisseur.nom %></td>
                     <td><%= b.lignes.length %> articles</td>
+                    <td>
+                        <% if (ecart === 0) { %>
+                            <span class="badge bg-success">✓ Conforme</span>
+                        <% } else if (ecart < 0) { %>
+                            <span class="badge bg-danger"><%= ecart %> (Manquant)</span>
+                            <br><small class="text-muted">Cmd: <%= totalCmd %> | Reçu: <%= totalRec %></small>
+                            <br><small class="text-success">Fournisseur notifié automatiquement</small>
+                        <% } else { %>
+                            <%
+                            const surplusAccepte = b.lignes.some(l => l.observations && l.observations.includes('Surplus') && l.observations.includes('accepté'));
+                            const surplusRefuse = b.lignes.some(l => l.observations && l.observations.includes('Surplus') && l.observations.includes('refus'));
+                            %>
+                            <% if (surplusAccepte) { %>
+                                <span class="badge bg-success">+<%= ecart %> (Surplus accepté ✓)</span>
+                                <br><small class="text-muted">Cmd: <%= totalCmd %> | Reçu: <%= totalRec %></small>
+                                <br><small class="text-success"><strong>Surplus accepté - Fournisseur notifié</strong></small>
+                            <% } else if (surplusRefuse) { %>
+                                <span class="badge bg-danger">+<%= ecart %> (Surplus refusé)</span>
+                                <br><small class="text-muted">Cmd: <%= totalCmd %> | Reçu: <%= totalRec %></small>
+                                <br><small class="text-danger"><strong>Surplus retourné au fournisseur</strong></small>
+                            <% } else { %>
+                                <span class="badge bg-warning text-dark">+<%= ecart %> (Surplus)</span>
+                                <br><small class="text-muted">Cmd: <%= totalCmd %> | Reçu: <%= totalRec %></small>
+                                <br><small class="text-success">Fournisseur notifié automatiquement</small>
+                                <% if (!b.controleQualite) { %>
+                                <br>
+                                <div class="mt-1">
+                                    <form action="/reception/decision-ecart/<%= b.id %>" method="POST" class="d-inline">
+                                        <input type="hidden" name="decision" value="accepter_surplus">
+                                        <button class="btn btn-outline-success btn-sm" onclick="return confirm('Accepter tout y compris le surplus ?')">Accepter tout</button>
+                                    </form>
+                                    <form action="/reception/decision-ecart/<%= b.id %>" method="POST" class="d-inline">
+                                        <input type="hidden" name="decision" value="refuser_surplus">
+                                        <button class="btn btn-outline-danger btn-sm" onclick="return confirm('Refuser le surplus et retourner au fournisseur ?')">Refuser surplus</button>
+                                    </form>
+                                </div>
+                                <% } %>
+                            <% } %>
+                        <% } %>
+                    </td>
                     <td>
                         <% if (b.controleQualite) { %>
                             <span class="badge bg-<%= b.controleQualite.resultat === 'conforme' ? 'success' : b.controleQualite.resultat === 'non_conforme' ? 'danger' : 'warning' %>">
@@ -40,6 +99,16 @@
                             <a href="/reception/controle/<%= b.id %>" class="btn btn-sm btn-info">Contrôle qualité</a>
                         <% } %>
                         <a href="/reception/pdf/<%= b.id %>" class="btn btn-sm btn-outline-danger">PDF</a>
+                        <%
+                        const hasRetour = b.lignes.some(l => 
+                          (l.actionNonConforme === 'retour_fournisseur' && l.quantiteRefusee > 0) ||
+                          (l.observations && l.observations.includes('Surplus') && l.observations.includes('refus')) ||
+                          l.statutQualite === 'RETOUR_APRES_QUARANTAINE'
+                        );
+                        %>
+                        <% if (hasRetour) { %>
+                            <a href="/reception/bon-retour/<%= b.id %>" class="btn btn-sm btn-outline-warning">Bon retour</a>
+                        <% } %>
                     </td>
                 </tr>
                 <% }) %>

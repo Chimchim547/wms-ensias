@@ -125,12 +125,17 @@ router.post('/rapprochement/:id', async (req, res) => {
       data: { quantiteTheorique: stockSysteme, ecart }
     });
     
+    const ancienEcart = ligne.ecart;
+    const ecartChange = ancienEcart !== null && ancienEcart !== ecart;
+
     resultats.push({
       reference: ligne.reference,
       designation: ligne.designation,
       stockSysteme,
       quantiteReelle: ligne.quantiteReelle,
       ecart,
+      ancienEcart,
+      ecartChange,
       justificatif: ligne.justificatif,
       cump: ligne.article.coutMoyenPondere
     });
@@ -151,14 +156,56 @@ router.post('/rapprochement/:id', async (req, res) => {
 });
 
 router.post('/valider/:id', async (req, res) => {
+  const inventaire = await prisma.inventaire.findUnique({
+    where: { id: parseInt(req.params.id) },
+    include: { lignes: { include: { article: true } } }
+  });
+
+  // Créer les mouvements d'ajustement pour chaque écart
+  for (const ligne of inventaire.lignes) {
+    if (ligne.ecart !== 0 && ligne.quantiteReelle !== null) {
+      if (ligne.ecart > 0) {
+        // On a trouvé PLUS que prévu → mouvement ENTREE
+        await prisma.mouvementStock.create({
+          data: {
+            type: 'ENTREE',
+            quantite: ligne.ecart,
+            articleId: ligne.articleId
+          }
+        });
+      } else {
+        // On a trouvé MOINS que prévu → mouvement SORTIE
+        await prisma.mouvementStock.create({
+          data: {
+            type: 'SORTIE',
+            quantite: Math.abs(ligne.ecart),
+            articleId: ligne.articleId
+          }
+        });
+      }
+    }
+  }
+
   await prisma.inventaire.update({
     where: { id: parseInt(req.params.id) },
     data: { dateRealisation: new Date() }
   });
 
+  // Résumé des ajustements
+  const ecarts = inventaire.lignes.filter(l => l.ecart !== 0);
+  const details = ecarts.map(l => l.reference + ' (écart: ' + (l.ecart > 0 ? '+' : '') + l.ecart + ')').join(', ');
+
   await prisma.notification.create({
     data: {
-      message: `Inventaire #${req.params.id} validé ✓. Les données de stock sont maintenant à jour.`,
+      message: `✅ Inventaire #${req.params.id} validé. Stock ajusté pour ${ecarts.length} article(s) : ${details || 'Aucun écart'}.`,
+      lien: '/articles/stock',
+      destinataireRole: 'RESPONSABLE_ENTREPOT'
+    }
+  });
+
+  await prisma.notification.create({
+    data: {
+      message: `Inventaire #${req.params.id} validé ✓. ${ecarts.length} ajustement(s) de stock effectué(s).`,
       lien: '/inventaire/detail/' + req.params.id,
       destinataireRole: 'ADMINISTRATEUR'
     }

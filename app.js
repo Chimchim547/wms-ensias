@@ -104,21 +104,51 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
 });
 
 app.get('/', (req, res) => res.redirect('/login'));
+
 // Routes notifications
-app.get('/notifications/lire/:id', isAuthenticated, async (req, res) => {
-  const notif = await prisma.notification.update({
-    where: { id: parseInt(req.params.id) },
-    data: { lue: true }
-  });
-  if (notif.lien) return res.redirect(notif.lien);
-  res.redirect('/dashboard');
+app.get('/notifications/traiter/:id', isAuthenticated, async (req, res) => {
+  try {
+    const notif = await prisma.notification.findUnique({
+      where: { id: parseInt(req.params.id) }
+    });
+    if (!notif) return res.redirect('/dashboard');
+    const lien = notif.lien || '/dashboard';
+    await prisma.notification.delete({
+      where: { id: parseInt(req.params.id) }
+    });
+    return res.redirect(lien);
+  } catch (err) {
+    console.log('Erreur notif traiter:', err.message);
+    return res.redirect('/dashboard');
+  }
 });
 
-app.get('/notifications/tout-lire', isAuthenticated, async (req, res) => {
-  await prisma.notification.updateMany({
-    where: { destinataireRole: req.user.role, lue: false },
-    data: { lue: true }
-  });
+app.get('/notifications/lire/:id', isAuthenticated, async (req, res) => {
+  try {
+    const notif = await prisma.notification.findUnique({
+      where: { id: parseInt(req.params.id) }
+    });
+    if (!notif) return res.redirect('/dashboard');
+    const lien = notif.lien || '/dashboard';
+    await prisma.notification.delete({
+      where: { id: parseInt(req.params.id) }
+    });
+    return res.redirect(lien);
+  } catch (err) {
+    console.log('Erreur notif lire:', err.message);
+    return res.redirect('/dashboard');
+  }
+});
+
+app.get('/notifications/tout-supprimer', isAuthenticated, async (req, res) => {
+  try {
+    const deleted = await prisma.notification.deleteMany({
+      where: { destinataireRole: req.user.role }
+    });
+    console.log('Notifications supprimees:', deleted.count);
+  } catch (err) {
+    console.log('Erreur suppression notifs:', err.message);
+  }
   res.redirect('/dashboard');
 });
 

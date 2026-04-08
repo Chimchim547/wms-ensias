@@ -28,6 +28,7 @@
                             <option value="AU_QUAI" <%= filtres.statut === 'AU_QUAI' ? 'selected' : '' %>>Au quai</option>
                             <option value="EXPEDIEE" <%= filtres.statut === 'EXPEDIEE' ? 'selected' : '' %>>Expédiée</option>
                             <option value="EN_ATTENTE_STOCK" <%= filtres.statut === 'EN_ATTENTE_STOCK' ? 'selected' : '' %>>En attente stock</option>
+                            <option value="BACKORDER" <%= filtres.statut === 'BACKORDER' ? 'selected' : '' %>>Backorder</option>
                             <option value="ANNULEE" <%= filtres.statut === 'ANNULEE' ? 'selected' : '' %>>Annulée</option>
                         </select>
                     </div>
@@ -65,8 +66,13 @@
             </thead>
             <tbody>
                 <% commandes.forEach(c => { %>
-                <tr>
-                    <td><%= c.numero %></td>
+                <tr class="<%= c.statut === 'BACKORDER' ? 'table-warning' : '' %>">
+                    <td>
+                        <%= c.numero %>
+                        <% if (c.commandeParentId) { %>
+                            <br><small class="text-muted">↳ de CMD originale</small>
+                        <% } %>
+                    </td>
                     <td><%= c.date.toLocaleDateString('fr-FR') %></td>
                     <td><%= c.nomClient %></td>
                     <td><%= c.prixTotal.toFixed(2) %> DH</td>
@@ -86,6 +92,8 @@
                             <span class="badge bg-info">Au quai</span>
                         <% } else if (c.statut === 'EXPEDIEE') { %>
                             <span class="badge bg-success">Expédiée ✓</span>
+                        <% } else if (c.statut === 'BACKORDER') { %>
+                            <span class="badge bg-warning text-dark">📦 Backorder</span>
                         <% } else if (c.statut === 'ANNULEE') { %>
                             <span class="badge bg-danger">Annulée</span>
                         <% } %>
@@ -93,8 +101,6 @@
                     <td>
                         <% if (c.statut === 'EXPEDIEE' && c.dateExpedition) { %>
                             <%= c.dateExpedition.toLocaleDateString('fr-FR') %>
-                        <% } else if (c.statut === 'EXPEDIEE') { %>
-                            <span class="text-muted">-</span>
                         <% } else { %>
                             <span class="text-muted">-</span>
                         <% } %>
@@ -102,18 +108,39 @@
                     <td>
                         <% if (c.statut === 'EN_ATTENTE') { %>
                             <form action="/commandes/picking/<%= c.id %>" method="POST" class="d-inline">
+                                <select name="modePicking" class="form-select form-select-sm d-inline-block" style="width: 120px;" onchange="toggleMagasinier(this)">
+                                    <option value="SERIE">Série</option>
+                                    <option value="PARALLELE">Parallèle</option>
+                                </select>
+                                <select name="magasinierSerie" class="form-select form-select-sm magasinier-select" style="width: 150px; display: none;">
+                                    <option value="">-- Magasinier --</option>
+                                    <% if (typeof magasiniers !== 'undefined') { %>
+                                        <% magasiniers.forEach(m => { %>
+                                        <option value="<%= m.id %>"><%= m.prenom %> <%= m.nom %></option>
+                                        <% }) %>
+                                    <% } %>
+                                </select>
                                 <button class="btn btn-sm btn-primary">Générer picking</button>
                             </form>
-                        <% } else if (c.statut !== 'EXPEDIEE' && c.statut !== 'ANNULEE') { %>
+                        <% } else if (c.statut === 'BACKORDER') { %>
+                            <% if (c.stockDispo) { %>
+                                <span class="text-success">Stock disponible ✓</span>
+                                <form action="/commandes/relancer-backorder/<%= c.id %>" method="POST" class="d-inline">
+                                    <button class="btn btn-sm btn-success ms-1" onclick="return confirm('Relancer ce backorder en picking ?')">Relancer</button>
+                                </form>
+                            <% } else { %>
+                                <span class="text-danger">⏳ En attente réappro</span>
+                            <% } %>
+                        <% } else if (c.statut === 'EXPEDIEE') { %>
+                            <span class="text-success">Terminée</span>
+                            <a href="/commandes/pdf/<%= c.id %>" class="btn btn-sm btn-outline-danger ms-1">BL</a>
+                            <a href="/commandes/facture/<%= c.id %>" class="btn btn-sm btn-outline-dark ms-1">Facture</a>
+                        <% } else if (c.statut === 'ANNULEE') { %>
+                            <span class="text-danger">Annulée</span>
+                        <% } else { %>
                             <a href="/commandes/picking/<%= c.id %>" class="btn btn-sm btn-outline-primary">
                                 <%= c.statut === 'PARTIELLE' ? '⚠ Décision' : 'Voir picking' %>
                             </a>
-                      <% } else if (c.statut === 'EXPEDIEE') { %>
-                           <span class="text-success">Terminée</span>
-                            <a href="/commandes/pdf/<%= c.id %>" class="btn btn-sm btn-outline-danger ms-1">BL</a>
-                            <a href="/commandes/facture/<%= c.id %>" class="btn btn-sm btn-outline-dark ms-1">Facture</a>
-                        <% } else { %>
-                            <span class="text-danger">Annulée</span>
                         <% } %>
                     </td>
                 </tr>
@@ -133,6 +160,8 @@
                     <span>→</span>
                     <span class="badge bg-danger p-2">Si partiel → Décision client</span>
                     <span>→</span>
+                    <span class="badge bg-dark p-2">📦 Backorder (si manquant)</span>
+                    <span>→</span>
                     <span class="badge bg-info p-2">4. Déplacer vers quai</span>
                     <span>→</span>
                     <span class="badge bg-success p-2">5. Expédier</span>
@@ -140,5 +169,20 @@
             </div>
         </div>
     </div>
+    <script>
+function toggleMagasinier(select) {
+    const form = select.closest('form');
+    const magSelect = form.querySelector('.magasinier-select');
+    if (select.value === 'SERIE') {
+        magSelect.style.display = 'inline-block';
+        magSelect.required = true;
+        magSelect.name = 'magasinierSerie';
+    } else {
+        magSelect.style.display = 'none';
+        magSelect.required = false;
+        magSelect.name = '';
+    }
+}
+</script>
 </body>
 </html>

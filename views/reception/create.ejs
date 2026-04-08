@@ -26,25 +26,38 @@
             </div>
             <h5>Lignes</h5>
             <div id="lignes">
-                <div class="row g-2 mb-2 ligne">
-                    <div class="col-md-4">
+                <div class="row g-2 mb-2 ligne align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Article</label>
                         <select name="articleIds" class="form-select" required>
                             <% articles.forEach(a => { %>
                             <option value="<%= a.id %>"><%= a.reference %> - <%= a.designation %></option>
                             <% }) %>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <input type="number" name="quantitesCommandees" class="form-control" placeholder="Qté commandée" required>
+                    <div class="col-md-2">
+                        <label class="form-label">Qté commandée</label>
+                        <input type="number" name="quantitesCommandees" class="form-control qte-cmd" placeholder="Qté commandée" min="1" required>
                     </div>
-                    <div class="col-md-3">
-                        <input type="number" name="quantitesRecues" class="form-control" placeholder="Qté reçue" required>
+                    <div class="col-md-2">
+                        <label class="form-label">Qté reçue</label>
+                        <input type="number" name="quantitesRecues" class="form-control qte-rec" placeholder="Qté reçue" min="0" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Écart</label>
+                        <span class="badge bg-secondary d-block p-2 ecart-badge">-</span>
+                    </div>
+                    <div class="col-md-1">
+                        <button type="button" class="btn btn-outline-danger btn-sm btn-supprimer" onclick="supprimerLigne(this)" style="display:none;">✕</button>
                     </div>
                 </div>
             </div>
             <button type="button" class="btn btn-outline-secondary btn-sm mb-3" onclick="ajouterLigne()">+ Ajouter ligne</button>
+            
+            <div id="resumeEcart" class="mb-3" style="display:none;"></div>
+
             <div>
-                <button type="submit" class="btn btn-warning">Créer</button>
+                <button type="submit" class="btn btn-warning btn-lg">Créer le bon de réception</button>
                 <a href="/reception" class="btn btn-secondary">Annuler</a>
             </div>
         </form>
@@ -53,8 +66,95 @@
     function ajouterLigne() {
         const ligne = document.querySelector('.ligne').cloneNode(true);
         ligne.querySelectorAll('input').forEach(i => i.value = '');
+        ligne.querySelector('.ecart-badge').textContent = '-';
+        ligne.querySelector('.ecart-badge').className = 'badge bg-secondary d-block p-2 ecart-badge';
+        ligne.querySelector('.btn-supprimer').style.display = 'block';
         document.getElementById('lignes').appendChild(ligne);
+        attachEcartListeners();
     }
+
+    function supprimerLigne(btn) {
+        const lignes = document.querySelectorAll('.ligne');
+        if (lignes.length > 1) {
+            btn.closest('.ligne').remove();
+            updateResume();
+        }
+    }
+
+    function attachEcartListeners() {
+        document.querySelectorAll('.qte-cmd, .qte-rec').forEach(input => {
+            input.removeEventListener('input', calculerEcart);
+            input.addEventListener('input', calculerEcart);
+        });
+    }
+
+    function calculerEcart() {
+        const ligne = this.closest('.ligne');
+        const cmd = parseInt(ligne.querySelector('.qte-cmd').value) || 0;
+        const rec = parseInt(ligne.querySelector('.qte-rec').value) || 0;
+        const ecart = rec - cmd;
+        const badge = ligne.querySelector('.ecart-badge');
+
+        if (cmd === 0 && rec === 0) {
+            badge.textContent = '-';
+            badge.className = 'badge bg-secondary d-block p-2 ecart-badge';
+        } else if (ecart === 0) {
+            badge.textContent = '✓ Conforme';
+            badge.className = 'badge bg-success d-block p-2 ecart-badge';
+        } else if (ecart < 0) {
+            badge.textContent = ecart + ' (Manquant)';
+            badge.className = 'badge bg-danger d-block p-2 ecart-badge';
+        } else {
+            badge.textContent = '+' + ecart + ' (Surplus)';
+            badge.className = 'badge bg-warning text-dark d-block p-2 ecart-badge';
+        }
+
+        updateResume();
+    }
+
+    function updateResume() {
+        const lignes = document.querySelectorAll('.ligne');
+        let totalCmd = 0, totalRec = 0, nbManquant = 0, nbSurplus = 0, nbConforme = 0;
+
+        lignes.forEach(ligne => {
+            const cmd = parseInt(ligne.querySelector('.qte-cmd').value) || 0;
+            const rec = parseInt(ligne.querySelector('.qte-rec').value) || 0;
+            totalCmd += cmd;
+            totalRec += rec;
+            if (cmd > 0 || rec > 0) {
+                if (rec < cmd) nbManquant++;
+                else if (rec > cmd) nbSurplus++;
+                else nbConforme++;
+            }
+        });
+
+        const resume = document.getElementById('resumeEcart');
+        if (totalCmd === 0 && totalRec === 0) {
+            resume.style.display = 'none';
+            return;
+        }
+
+        resume.style.display = 'block';
+        const ecartTotal = totalRec - totalCmd;
+        let classe = 'alert-success';
+        let message = '✅ Toutes les quantités sont conformes.';
+
+        if (nbManquant > 0 && nbSurplus > 0) {
+            classe = 'alert-warning';
+            message = '⚠️ Écarts mixtes détectés : ' + nbManquant + ' ligne(s) en manquant, ' + nbSurplus + ' ligne(s) en surplus.';
+        } else if (nbManquant > 0) {
+            classe = 'alert-danger';
+            message = '⚠️ Quantités manquantes détectées sur ' + nbManquant + ' ligne(s). Total commandé: ' + totalCmd + ', Total reçu: ' + totalRec + ' (écart: ' + ecartTotal + ').';
+        } else if (nbSurplus > 0) {
+            classe = 'alert-warning';
+            message = '📦 Surplus détecté sur ' + nbSurplus + ' ligne(s). Total commandé: ' + totalCmd + ', Total reçu: ' + totalRec + ' (écart: +' + ecartTotal + ').';
+        }
+
+        resume.className = 'alert ' + classe + ' mb-3';
+        resume.innerHTML = '<strong>' + message + '</strong>';
+    }
+
+    attachEcartListeners();
     </script>
 </body>
 </html>

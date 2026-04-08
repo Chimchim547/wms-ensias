@@ -68,7 +68,12 @@
                         </strong>
                     </td>
                     <td><%= (r.ecart * r.cump).toFixed(2) %> DH</td>
-                    <td><%= r.justificatif || '-' %></td>
+                    <td>
+  <%= r.justificatif || '-' %>
+  <% if (r.ecartChange) { %>
+    <br><span class="badge bg-warning text-dark">⚠ Écart modifié (comptage: <%= r.ancienEcart > 0 ? '+' : '' %><%= r.ancienEcart %> → rapprochement: <%= r.ecart > 0 ? '+' : '' %><%= r.ecart %>)</span>
+  <% } %>
+</td>
                     <td>
                         <% if (r.ecart === 0) { %>
                             <span class="badge bg-success">Conforme</span>

@@ -9,40 +9,196 @@
     <%- include('../layouts/navbar') %>
     <div class="container mt-4">
         <h2>Contrôle Qualité - Bon <%= bon.numero %></h2>
-        <p>Fournisseur: <strong><%= bon.fournisseur.nom %></strong></p>
-        <form action="/reception/controle/<%= bon.id %>" method="POST">
+        <p>Fournisseur: <strong><%= bon.fournisseur.nom %></strong> | Date: <%= bon.date.toLocaleDateString('fr-FR') %></p>
+        
+        <div class="alert alert-info">
+            <strong>Instructions :</strong> Pour chaque article, saisissez la quantité acceptée. 
+            Si la quantité acceptée est inférieure à la quantité reçue, choisissez l'action à appliquer pour les articles refusés.
+        </div>
+
+        <form action="/reception/controle/<%= bon.id %>" method="POST" id="formControle">
             <table class="table">
-                <thead><tr><th>Article</th><th>Qté commandée</th><th>Qté reçue</th><th>Qté acceptée</th></tr></thead>
+                <thead class="table-dark">
+                    <tr>
+                        <th>Article</th>
+                        <th>Qté commandée</th>
+                        <th>Qté reçue</th>
+                        <th>Qté acceptée</th>
+                        <th>Qté refusée</th>
+                        <th>Action pour refusés</th>
+                        <th>Motif</th>
+                    </tr>
+                </thead>
                 <tbody>
-                    <% bon.lignes.forEach(l => { %>
+                    <% bon.lignes.forEach((l, index) => { %>
                     <tr>
                         <td><%= l.article.reference %> - <%= l.article.designation %></td>
                         <td><%= l.quantiteCommandee %></td>
                         <td><%= l.quantiteRecue %></td>
-                        <td><input type="number" name="quantitesAcceptees" class="form-control" value="<%= l.quantiteRecue %>" max="<%= l.quantiteRecue %>"></td>
+                        <td>
+                            <input type="number" name="quantitesAcceptees" class="form-control qte-acceptee" 
+                                value="<%= l.quantiteRecue %>" max="<%= l.quantiteRecue %>" min="0"
+                                data-recue="<%= l.quantiteRecue %>" data-index="<%= index %>">
+                        </td>
+                        <td>
+                            <span class="badge bg-danger" id="refusee-<%= index %>">0</span>
+                        </td>
+                        <td>
+                            <select name="actions" class="form-select form-select-sm action-select" id="action-<%= index %>" disabled>
+                                <option value="aucune">Aucune</option>
+                                <option value="retour_fournisseur">Retour fournisseur</option>
+                                <option value="quarantaine">Mise en quarantaine</option>
+                                <option value="accepter_reserve">Accepter avec réserve</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select name="motifs" class="form-select form-select-sm motif-select" id="motif-<%= index %>" disabled onchange="toggleAutre(this, <%= index %>)">
+                                <option value="">-</option>
+                                <option value="endommage">Produit endommagé</option>
+                                <option value="defectueux">Produit défectueux</option>
+                                <option value="perime">Produit périmé</option>
+                                <option value="mauvais_article">Mauvais article livré</option>
+                                <option value="emballage">Emballage abîmé</option>
+                                <option value="autre">Autre</option>
+                            </select>
+                            <input type="text" name="motifAutres" class="form-control form-control-sm mt-1" id="motifAutre-<%= index %>" placeholder="Précisez le motif..." style="display:none;">
+                        </td>
                     </tr>
                     <% }) %>
                 </tbody>
             </table>
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Résultat</label>
-                    <select name="resultat" class="form-select" required>
-                        <option value="conforme">Conforme</option>
-                        <option value="partiellement_conforme">Partiellement conforme</option>
-                        <option value="non_conforme">Non conforme</option>
-                    </select>
-                </div>
-                <div class="col-md-8">
-                    <label class="form-label">Commentaire</label>
-                    <input type="text" name="commentaire" class="form-control">
-                </div>
+
+            <input type="hidden" name="resultat" id="resultatSelect" value="conforme">
+            <input type="hidden" name="commentaire" value="">
+
+            <div id="alertNonConforme" class="alert alert-danger mt-3" style="display:none;">
+                <strong>⚠ Articles non conformes détectés.</strong> Veuillez choisir une action pour chaque article refusé.
             </div>
+
+            <div id="alertConforme" class="alert alert-success mt-3" style="display:none;">
+                <strong>✅ Tous les articles sont conformes.</strong>
+            </div>
+
             <div class="mt-3">
-                <button type="submit" class="btn btn-info">Valider le contrôle</button>
+                <button type="submit" class="btn btn-info btn-lg">Valider le contrôle</button>
                 <a href="/reception" class="btn btn-secondary">Annuler</a>
             </div>
         </form>
     </div>
+
+    <script>
+    function toggleAutre(select, index) {
+        const input = document.getElementById('motifAutre-' + index);
+        if (select.value === 'autre') {
+            input.style.display = 'block';
+            input.required = true;
+        } else {
+            input.style.display = 'none';
+            input.required = false;
+            input.value = '';
+        }
+    }
+
+    document.querySelectorAll('.qte-acceptee').forEach(input => {
+        input.addEventListener('input', function() {
+            const index = this.dataset.index;
+            const recue = parseInt(this.dataset.recue);
+            const acceptee = parseInt(this.value) || 0;
+            const refusee = recue - acceptee;
+            
+            const badge = document.getElementById('refusee-' + index);
+            const actionSelect = document.getElementById('action-' + index);
+            const motifSelect = document.getElementById('motif-' + index);
+            const motifAutre = document.getElementById('motifAutre-' + index);
+            
+            badge.textContent = refusee;
+            
+            if (refusee > 0) {
+                badge.className = 'badge bg-danger';
+                actionSelect.disabled = false;
+                actionSelect.required = true;
+                actionSelect.value = 'retour_fournisseur';
+                motifSelect.disabled = false;
+                motifSelect.required = true;
+            } else {
+                badge.className = 'badge bg-success';
+                actionSelect.disabled = true;
+                actionSelect.required = false;
+                actionSelect.value = 'aucune';
+                motifSelect.disabled = true;
+                motifSelect.required = false;
+                motifSelect.value = '';
+                motifAutre.style.display = 'none';
+                motifAutre.required = false;
+                motifAutre.value = '';
+            }
+
+            updateResultat();
+        });
+        input.dispatchEvent(new Event('input'));
+    });
+
+    function updateResultat() {
+        const inputs = document.querySelectorAll('.qte-acceptee');
+        let toutAccepte = true;
+        let rienAccepte = true;
+        
+        inputs.forEach(input => {
+            const recue = parseInt(input.dataset.recue);
+            const acceptee = parseInt(input.value) || 0;
+            if (acceptee < recue) toutAccepte = false;
+            if (acceptee > 0) rienAccepte = false;
+        });
+
+        const select = document.getElementById('resultatSelect');
+        const alertDanger = document.getElementById('alertNonConforme');
+        const alertSuccess = document.getElementById('alertConforme');
+
+        if (toutAccepte) {
+            select.value = 'conforme';
+            alertDanger.style.display = 'none';
+            alertSuccess.style.display = 'block';
+        } else if (rienAccepte) {
+            select.value = 'non_conforme';
+            alertDanger.style.display = 'block';
+            alertSuccess.style.display = 'none';
+        } else {
+            select.value = 'partiellement_conforme';
+            alertDanger.style.display = 'block';
+            alertSuccess.style.display = 'none';
+        }
+    }
+
+    document.getElementById('formControle').addEventListener('submit', function(e) {
+        const inputs = document.querySelectorAll('.qte-acceptee');
+        let hasRefused = false;
+        let missingAction = false;
+        let missingMotif = false;
+
+        inputs.forEach(input => {
+            const index = input.dataset.index;
+            const recue = parseInt(input.dataset.recue);
+            const acceptee = parseInt(input.value) || 0;
+            const action = document.getElementById('action-' + index).value;
+            const motif = document.getElementById('motif-' + index).value;
+
+            if (acceptee < recue) {
+                hasRefused = true;
+                if (action === 'aucune') missingAction = true;
+                if (!motif) missingMotif = true;
+            }
+        });
+
+        if (hasRefused && missingAction) {
+            e.preventDefault();
+            alert('Veuillez choisir une action pour chaque article refusé.');
+            return;
+        }
+        if (hasRefused && missingMotif) {
+            e.preventDefault();
+            alert('Veuillez indiquer un motif pour chaque article refusé.');
+        }
+    });
+    </script>
 </body>
 </html>
