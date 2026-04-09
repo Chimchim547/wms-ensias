@@ -9,9 +9,9 @@
     <%- include('../layouts/navbar') %>
     <div class="container mt-4">
         <h2>Déplacer un Article</h2>
-        <p class="text-muted">Le système filtre automatiquement les emplacements compatibles selon les dimensions et le poids de l'article.</p>
+        <p class="text-muted">Le système filtre les emplacements compatibles selon la catégorie de zone, les dimensions et le poids.</p>
 
-        <form action="/mouvements/transfert" method="POST" class="col-md-8">
+        <form action="/mouvements/transfert" method="POST" class="col-md-10">
             <div class="mb-3">
                 <label class="form-label">Article à déplacer</label>
                 <select name="articleId" class="form-select" id="articleSelect" required>
@@ -22,59 +22,80 @@
                         data-largeur="<%= a.largeur %>"
                         data-hauteur="<%= a.hauteur %>"
                         data-poids="<%= a.poids %>"
-                        data-actuel="<%= a.emplacement.code %> - Zone <%= a.emplacement.zone.code %>"
-                        data-compatibles="<%= JSON.stringify(a.compatibles.map(c => c.id)) %>">
-                        <%= a.reference %> - <%= a.designation %> (Actuel: <%= a.emplacement.code %> - Zone <%= a.emplacement.zone.code %>)
+                        data-categorie="<%= a.categorie ? a.categorie.nom : '-' %>"
+                        data-emplacements="<%= JSON.stringify(a.emplacementsActuels) %>"
+                        data-compatibles="<%= JSON.stringify(a.compatibles) %>">
+                        <%= a.reference %> - <%= a.designation %> | <%= a.categorie ? a.categorie.nom : '-' %> | <%= a.totalStocke %> unité(s)
                     </option>
                     <% }) %>
                 </select>
             </div>
 
-            <!-- Détails article sélectionné -->
+            <!-- Détails article -->
             <div id="articleDetails" class="card mb-3" style="display:none;">
                 <div class="card-body">
                     <h6>Article sélectionné :</h6>
-                    <div class="row">
-                        <div class="col-md-3"><span class="badge bg-secondary p-2" id="artActuel"></span></div>
+                    <div class="row mb-2">
+                        <div class="col-md-2"><span class="badge bg-info p-2" id="artCategorie"></span></div>
                         <div class="col-md-2"><span class="badge bg-primary p-2" id="artLongueur"></span></div>
                         <div class="col-md-2"><span class="badge bg-primary p-2" id="artLargeur"></span></div>
                         <div class="col-md-2"><span class="badge bg-primary p-2" id="artHauteur"></span></div>
-                        <div class="col-md-2"><span class="badge bg-primary p-2" id="artPoids"></span></div>
+                        <div class="col-md-2"><span class="badge bg-warning text-dark p-2" id="artPoids"></span></div>
                     </div>
+                    <h6>Emplacements actuels :</h6>
+                    <div id="emplacementsActuels"></div>
                 </div>
             </div>
 
+            <!-- Source -->
+            <div class="mb-3" id="sourceBlock" style="display:none;">
+                <label class="form-label">Emplacement source (d'où prendre)</label>
+                <select name="sourceEmplacementId" class="form-select" id="sourceSelect" required>
+                    <option value="">-- Choisir la source --</option>
+                </select>
+            </div>
+
+            <!-- Quantité -->
+            <div class="mb-3" id="quantiteBlock" style="display:none;">
+                <label class="form-label">Quantité à déplacer</label>
+                <input type="number" name="quantite" class="form-control" id="quantiteInput" min="1" value="1" required style="max-width: 150px;">
+                <small class="text-muted" id="quantiteInfo"></small>
+            </div>
+
+            <!-- Destination -->
             <div class="mb-3">
-                <label class="form-label">Nouvel emplacement (compatible)</label>
+                <label class="form-label">Emplacement destination (compatible)</label>
                 <select name="newEmplacementId" class="form-select" id="emplacementSelect" required>
                     <option value="">-- Sélectionnez d'abord un article --</option>
                 </select>
                 <div id="noCompatible" class="alert alert-warning mt-2" style="display:none;">
-                    Aucun emplacement compatible disponible pour cet article.
+                    Aucun emplacement compatible disponible. Vérifiez la catégorie de zone ou les dimensions.
                 </div>
                 <div id="compatibleCount" class="text-success mt-1" style="display:none;"></div>
             </div>
 
-            <button type="submit" class="btn btn-secondary" id="btnDeplacer" disabled>Déplacer</button>
+            <button type="submit" class="btn btn-secondary btn-lg" id="btnDeplacer" disabled>Déplacer</button>
             <a href="/mouvements" class="btn btn-outline-secondary">Annuler</a>
         </form>
 
-        <!-- Tableau des emplacements libres -->
+        <!-- Tableau emplacements -->
         <div class="mt-4">
-            <h5>Emplacements libres disponibles</h5>
+            <h5>Emplacements disponibles</h5>
             <table class="table table-sm table-striped">
                 <thead class="table-dark">
-                    <tr><th>Code</th><th>Zone</th><th>Longueur</th><th>Largeur</th><th>Hauteur</th><th>Poids max</th></tr>
+                    <tr><th>Code</th><th>Zone</th><th>Catégorie</th><th>Longueur</th><th>Largeur</th><th>Hauteur</th><th>Poids max</th><th>Capacité</th></tr>
                 </thead>
                 <tbody>
                     <% emplacements.forEach(e => { %>
                     <tr id="emp-row-<%= e.id %>">
                         <td><%= e.code %></td>
                         <td><%= e.zone.code %></td>
+                        <td><%= e.zone.categorie ? e.zone.categorie.nom : 'Toutes' %></td>
                         <td><%= e.longueur %> cm</td>
                         <td><%= e.largeur %> cm</td>
                         <td><%= e.hauteur %> cm</td>
                         <td><%= e.poidsMax %> kg</td>
+                        <td id="emp-cap-<%= e.id %>">-</td>
                     </tr>
                     <% }) %>
                 </tbody>
@@ -83,33 +104,30 @@
     </div>
 
     <script>
-    const emplacementsData = <%- JSON.stringify(emplacements.map(e => ({
-        id: e.id,
-        code: e.code,
-        zone: e.zone.code,
-        longueur: e.longueur,
-        largeur: e.largeur,
-        hauteur: e.hauteur,
-        poidsMax: e.poidsMax
-    }))) %>;
-
     document.getElementById('articleSelect').addEventListener('change', function() {
         const selected = this.options[this.selectedIndex];
-        const emplacementSelect = document.getElementById('emplacementSelect');
         const articleDetails = document.getElementById('articleDetails');
+        const sourceBlock = document.getElementById('sourceBlock');
+        const quantiteBlock = document.getElementById('quantiteBlock');
+        const emplacementSelect = document.getElementById('emplacementSelect');
         const noCompatible = document.getElementById('noCompatible');
         const compatibleCount = document.getElementById('compatibleCount');
         const btnDeplacer = document.getElementById('btnDeplacer');
-
+        
         emplacementSelect.innerHTML = '';
         noCompatible.style.display = 'none';
         compatibleCount.style.display = 'none';
         btnDeplacer.disabled = true;
+        sourceBlock.style.display = 'none';
+        quantiteBlock.style.display = 'none';
 
-        // Reset highlighting
-        emplacementsData.forEach(e => {
-            const row = document.getElementById('emp-row-' + e.id);
-            if (row) { row.style.background = ''; row.style.fontWeight = ''; }
+        // Reset tableau
+        document.querySelectorAll('[id^="emp-row-"]').forEach(row => {
+            row.style.background = '';
+            row.style.fontWeight = '';
+        });
+        document.querySelectorAll('[id^="emp-cap-"]').forEach(cap => {
+            cap.textContent = '-';
         });
 
         if (!this.value) {
@@ -119,40 +137,74 @@
         }
 
         // Afficher détails
-        document.getElementById('artActuel').textContent = 'Actuel: ' + selected.dataset.actuel;
+        document.getElementById('artCategorie').textContent = selected.dataset.categorie;
         document.getElementById('artLongueur').textContent = 'L: ' + selected.dataset.longueur + ' cm';
         document.getElementById('artLargeur').textContent = 'l: ' + selected.dataset.largeur + ' cm';
         document.getElementById('artHauteur').textContent = 'H: ' + selected.dataset.hauteur + ' cm';
         document.getElementById('artPoids').textContent = 'P: ' + selected.dataset.poids + ' kg';
         articleDetails.style.display = 'block';
 
-        // Filtrer compatibles
-        const compatibleIds = JSON.parse(selected.dataset.compatibles);
+        // Emplacements actuels
+        const empsActuels = JSON.parse(selected.dataset.emplacements);
+        let empsHtml = '';
+        empsActuels.forEach(ea => {
+            empsHtml += '<span class="badge bg-secondary me-2 p-2">' + ea.code + ' (Zone ' + ea.zone + ') — ' + ea.quantite + ' unité(s)</span>';
+        });
+        document.getElementById('emplacementsActuels').innerHTML = empsHtml;
 
-        if (compatibleIds.length === 0) {
+        // Source select
+        const sourceSelect = document.getElementById('sourceSelect');
+        sourceSelect.innerHTML = '<option value="">-- Choisir la source --</option>';
+        empsActuels.forEach(ea => {
+            const opt = document.createElement('option');
+            opt.value = ea.emplacementId;
+            opt.textContent = ea.code + ' (Zone ' + ea.zone + ') — ' + ea.quantite + ' unité(s)';
+            opt.dataset.maxqte = ea.quantite;
+            sourceSelect.appendChild(opt);
+        });
+        sourceBlock.style.display = 'block';
+
+        // Compatibles
+        const compatibles = JSON.parse(selected.dataset.compatibles);
+
+        if (compatibles.length === 0) {
             emplacementSelect.innerHTML = '<option value="">Aucun emplacement compatible</option>';
             noCompatible.style.display = 'block';
             return;
         }
 
-        compatibleCount.textContent = compatibleIds.length + ' emplacement(s) compatible(s)';
+        compatibleCount.textContent = compatibles.length + ' emplacement(s) compatible(s) — catégorie: ' + selected.dataset.categorie;
         compatibleCount.style.display = 'block';
 
-        emplacementSelect.innerHTML = '<option value="">-- Choisir un emplacement --</option>';
+        emplacementSelect.innerHTML = '<option value="">-- Choisir la destination --</option>';
+        compatibles.forEach(c => {
+            const option = document.createElement('option');
+            option.value = c.id;
+            option.textContent = c.code + ' - Zone ' + c.zone + ' (' + c.categorie + ') | Capacité: ' + c.capaciteMax + ' (' + c.longueur + 'x' + c.largeur + 'x' + c.hauteur + ' cm, max ' + c.poidsMax + ' kg)';
+            emplacementSelect.appendChild(option);
 
-        emplacementsData.forEach(e => {
-            if (compatibleIds.includes(e.id)) {
-                const option = document.createElement('option');
-                option.value = e.id;
-                option.textContent = e.code + ' - Zone ' + e.zone + ' (' + e.longueur + 'x' + e.largeur + 'x' + e.hauteur + ' cm, max ' + e.poidsMax + ' kg)';
-                emplacementSelect.appendChild(option);
-
-                const row = document.getElementById('emp-row-' + e.id);
-                if (row) { row.style.background = '#d4edda'; row.style.fontWeight = 'bold'; }
-            }
+            const row = document.getElementById('emp-row-' + c.id);
+            if (row) { row.style.background = '#d4edda'; row.style.fontWeight = 'bold'; }
+            const cap = document.getElementById('emp-cap-' + c.id);
+            if (cap) cap.textContent = c.capaciteMax;
         });
+    });
 
-        btnDeplacer.disabled = false;
+    // Source selection -> show quantite
+    document.getElementById('sourceSelect').addEventListener('change', function() {
+        const quantiteBlock = document.getElementById('quantiteBlock');
+        const quantiteInput = document.getElementById('quantiteInput');
+        const quantiteInfo = document.getElementById('quantiteInfo');
+        
+        if (this.value) {
+            const maxQte = parseInt(this.options[this.selectedIndex].dataset.maxqte);
+            quantiteInput.max = maxQte;
+            quantiteInput.value = maxQte;
+            quantiteInfo.textContent = 'Max: ' + maxQte + ' unité(s) disponible(s) dans cet emplacement';
+            quantiteBlock.style.display = 'block';
+        } else {
+            quantiteBlock.style.display = 'none';
+        }
     });
 
     document.getElementById('emplacementSelect').addEventListener('change', function() {

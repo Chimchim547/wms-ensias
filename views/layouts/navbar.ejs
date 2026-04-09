@@ -1,6 +1,279 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+  /* ===== GLOBAL THEME ===== */
+  body {
+    font-family: 'Outfit', sans-serif !important;
+    background: #f4f6f9 !important;
+    color: #1e293b;
+  }
+
+  /* Navbar */
+  .wms-navbar {
+    background: white !important;
+    border-bottom: 1px solid #e8eaed;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    padding: 0 20px;
+  }
+
+  .wms-navbar .navbar-brand {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #1e293b !important;
+    letter-spacing: -0.5px;
+  }
+
+  .wms-navbar .navbar-brand span {
+    color: #3b82f6;
+  }
+
+  .wms-navbar .nav-link {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #64748b !important;
+    padding: 12px 14px !important;
+    transition: color 0.2s;
+    border-bottom: 2px solid transparent;
+  }
+
+  .wms-navbar .nav-link:hover {
+    color: #3b82f6 !important;
+    border-bottom-color: #3b82f6;
+  }
+
+  .wms-navbar .nav-link.active {
+    color: #3b82f6 !important;
+    font-weight: 600;
+    border-bottom-color: #3b82f6;
+  }
+
+  .wms-navbar .user-info {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .wms-navbar .user-role {
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 6px;
+  }
+
+  .role-admin { background: #ede9fe; color: #7c3aed; }
+  .role-entrepot { background: #d1fae5; color: #059669; }
+  .role-commande { background: #dbeafe; color: #2563eb; }
+  .role-magasinier { background: #fef3c7; color: #d97706; }
+  .role-reception { background: #ffe4e6; color: #e11d48; }
+
+  .btn-notif {
+    background: #f1f5f9 !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #475569 !important;
+    font-size: 0.85rem;
+    padding: 6px 10px;
+    border-radius: 8px;
+    position: relative;
+    transition: all 0.2s;
+  }
+
+  .btn-notif:hover {
+    background: #e2e8f0 !important;
+    color: #1e293b !important;
+  }
+
+  .btn-notif .badge {
+    font-size: 0.6rem;
+    padding: 3px 5px;
+  }
+
+  .btn-logout {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .btn-logout:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #ef4444;
+  }
+
+  /* ===== GLOBAL TABLE STYLES ===== */
+  .table {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e8eaed;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .table thead th {
+    background: #f8fafc !important;
+    color: #64748b !important;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e8eaed;
+  }
+
+  .table thead.table-dark th {
+    background: #1e293b !important;
+    color: #e2e8f0 !important;
+  }
+
+  .table tbody td {
+    padding: 12px 16px;
+    color: #475569;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .table tbody tr:hover {
+    background: #f8fafc;
+  }
+
+  .table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* ===== GLOBAL BADGE STYLES ===== */
+  .badge {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
+  }
+
+  .badge.bg-success { background: #d1fae5 !important; color: #059669 !important; }
+  .badge.bg-danger { background: #fee2e2 !important; color: #dc2626 !important; }
+  .badge.bg-warning { background: #fef3c7 !important; color: #d97706 !important; }
+  .badge.bg-primary { background: #dbeafe !important; color: #2563eb !important; }
+  .badge.bg-info { background: #ecfeff !important; color: #0891b2 !important; }
+  .badge.bg-secondary { background: #f1f5f9 !important; color: #64748b !important; }
+  .badge.bg-dark { background: #1e293b !important; color: #e2e8f0 !important; }
+
+  /* ===== GLOBAL BUTTON STYLES ===== */
+  .btn-primary { background: #3b82f6; border-color: #3b82f6; font-family: 'Outfit', sans-serif; font-weight: 500; border-radius: 8px; }
+  .btn-primary:hover { background: #2563eb; border-color: #2563eb; }
+  .btn-success { background: #10b981; border-color: #10b981; font-family: 'Outfit', sans-serif; font-weight: 500; border-radius: 8px; }
+  .btn-success:hover { background: #059669; border-color: #059669; }
+  .btn-danger { background: #ef4444; border-color: #ef4444; font-family: 'Outfit', sans-serif; font-weight: 500; border-radius: 8px; }
+  .btn-danger:hover { background: #dc2626; border-color: #dc2626; }
+  .btn-warning { background: #f59e0b; border-color: #f59e0b; font-family: 'Outfit', sans-serif; font-weight: 500; border-radius: 8px; }
+  .btn-info { background: #0891b2; border-color: #0891b2; color: white; font-family: 'Outfit', sans-serif; font-weight: 500; border-radius: 8px; }
+  .btn-info:hover { background: #0e7490; border-color: #0e7490; color: white; }
+  .btn-secondary { background: #64748b; border-color: #64748b; font-family: 'Outfit', sans-serif; font-weight: 500; border-radius: 8px; }
+
+  .btn-outline-primary { color: #3b82f6; border-color: #3b82f6; font-family: 'Outfit', sans-serif; font-weight: 500; border-radius: 8px; }
+  .btn-outline-primary:hover { background: #3b82f6; color: white; }
+  .btn-outline-success { color: #10b981; border-color: #10b981; font-family: 'Outfit', sans-serif; font-weight: 500; border-radius: 8px; }
+  .btn-outline-success:hover { background: #10b981; color: white; }
+
+  .btn-sm { font-size: 0.78rem; padding: 5px 12px; }
+
+  /* ===== GLOBAL CARD STYLES ===== */
+  .card {
+    border: 1px solid #e8eaed;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .card-body { padding: 20px; }
+
+  /* ===== GLOBAL FORM STYLES ===== */
+  .form-control, .form-select {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.88rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: #1e293b;
+    transition: all 0.2s;
+  }
+
+  .form-control:focus, .form-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+  }
+
+  .form-label {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #475569;
+    margin-bottom: 6px;
+  }
+
+  /* ===== GLOBAL HEADING ===== */
+  h2, h3, h4, h5 {
+    font-family: 'Outfit', sans-serif;
+    color: #1e293b;
+  }
+
+  h2 { font-weight: 700; font-size: 1.5rem; }
+
+  .text-muted { color: #94a3b8 !important; }
+
+  /* ===== GLOBAL ALERT ===== */
+  .alert {
+    font-family: 'Outfit', sans-serif;
+    border-radius: 10px;
+    font-size: 0.85rem;
+  }
+
+  /* ===== CONTAINER TWEAKS ===== */
+  .container, .container-fluid {
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .container.mt-4 {
+    padding-top: 10px;
+  }
+
+  /* ===== DROPDOWN ===== */
+  .dropdown-menu {
+    font-family: 'Outfit', sans-serif;
+    border: 1px solid #e8eaed;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    padding: 8px;
+  }
+
+  .dropdown-item {
+    font-size: 0.82rem;
+    border-radius: 6px;
+    padding: 8px 12px;
+  }
+
+  .dropdown-item:hover {
+    background: #f1f5f9;
+  }
+</style>
+
+<nav class="navbar navbar-expand-lg wms-navbar">
   <div class="container-fluid">
-    <a class="navbar-brand" href="/dashboard">WMS ENSIAS</a>
+    <a class="navbar-brand" href="/dashboard">WMS <span>ENSIAS</span></a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -10,9 +283,12 @@
 
           <% if (user.role === 'ADMINISTRATEUR') { %>
             <li class="nav-item"><a class="nav-link" href="/articles">Articles</a></li>
+            <li class="nav-item"><a class="nav-link" href="/articles/stock">Stock</a></li>
             <li class="nav-item"><a class="nav-link" href="/categories">Catégories</a></li>
             <li class="nav-item"><a class="nav-link" href="/zones">Zones</a></li>
             <li class="nav-item"><a class="nav-link" href="/emplacements">Emplacements</a></li>
+            <li class="nav-item"><a class="nav-link" href="/emplacements/affecter">Affecter</a></li>
+            <li class="nav-item"><a class="nav-link" href="/zones/plan">Plan</a></li>
             <li class="nav-item"><a class="nav-link" href="/mouvements">Mouvements</a></li>
             <li class="nav-item"><a class="nav-link" href="/utilisateurs">Utilisateurs</a></li>
             <li class="nav-item"><a class="nav-link" href="/articles/roulement">Rotation</a></li>
@@ -47,38 +323,45 @@
 
         <% } %>
       </ul>
-      <div class="d-flex align-items-center">
+      <div class="d-flex align-items-center gap-2">
         <% if (user && notifications) { %>
-        <div class="dropdown me-3">
-          <a class="btn btn-outline-light btn-sm position-relative dropdown-toggle" href="#" role="button" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            🔔
+        <div class="dropdown">
+          <a class="btn btn-notif dropdown-toggle" href="#" role="button" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-bell"></i>
             <% if (notifications.length > 0) { %>
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="background: #ef4444 !important; color: white !important;">
               <%= notifications.length %>
             </span>
             <% } %>
           </a>
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notifDropdown" style="min-width: 350px; max-height: 400px; overflow-y: auto;">
-            <li><h6 class="dropdown-header">Notifications (<%= notifications.length %>)</h6></li>
+            <li><h6 class="dropdown-header" style="font-family: 'Outfit'; font-weight: 600;">Notifications (<%= notifications.length %>)</h6></li>
             <% if (notifications.length === 0) { %>
               <li><span class="dropdown-item text-muted">Aucune notification</span></li>
             <% } else { %>
               <% notifications.forEach(n => { %>
               <li>
-                <a class="dropdown-item fw-bold" href="/notifications/traiter/<%= n.id %>" style="white-space: normal; word-wrap: break-word;">
+                <a class="dropdown-item" href="/notifications/traiter/<%= n.id %>" style="white-space: normal; word-wrap: break-word;">
                   <small class="text-muted"><%= n.createdAt.toLocaleDateString('fr-FR') %> <%= n.createdAt.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}) %></small><br>
-                  <%= n.message %>
+                  <span style="font-weight: 500; color: #1e293b;"><%= n.message %></span>
                 </a>
               </li>
               <% }) %>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-center text-danger" href="/notifications/tout-supprimer">Supprimer toutes les notifications</a></li>
+              <li><a class="dropdown-item text-center" href="/notifications/tout-supprimer" style="color: #ef4444; font-weight: 500;">Supprimer toutes</a></li>
             <% } %>
           </ul>
         </div>
         <% } %>
-        <span class="text-light me-3"><%= user ? user.prenom + ' ' + user.nom + ' (' + user.role + ')' : '' %></span>
-        <a href="/logout" class="btn btn-outline-light btn-sm">Déconnexion</a>
+        <span class="user-info">
+          <%= user ? user.prenom + ' ' + user.nom : '' %>
+          <% if (user) { %>
+            <span class="user-role role-<%= user.role === 'ADMINISTRATEUR' ? 'admin' : user.role === 'RESPONSABLE_ENTREPOT' ? 'entrepot' : user.role === 'RESPONSABLE_COMMANDE' ? 'commande' : user.role === 'MAGASINIER' ? 'magasinier' : 'reception' %>">
+              <%= user.role.replace(/_/g, ' ') %>
+            </span>
+          <% } %>
+        </span>
+        <a href="/logout" class="btn-logout">Déconnexion</a>
       </div>
     </div>
   </div>

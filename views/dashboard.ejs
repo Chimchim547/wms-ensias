@@ -6,251 +6,489 @@
     <title>WMS - Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #f4f6f9;
+            color: #1e293b;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 40px;
+        }
+
+        .welcome-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .welcome-text h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .welcome-text h1 span { color: #3b82f6; }
+
+        .welcome-text p {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            font-weight: 400;
+            margin-top: 2px;
+        }
+
+        .role-badge {
+            padding: 7px 18px;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+        }
+
+        .role-ADMINISTRATEUR { background: #ede9fe; color: #7c3aed; }
+        .role-RESPONSABLE_ENTREPOT { background: #d1fae5; color: #059669; }
+        .role-RESPONSABLE_COMMANDE { background: #dbeafe; color: #2563eb; }
+        .role-MAGASINIER { background: #fef3c7; color: #d97706; }
+        .role-RESPONSABLE_RECEPTION { background: #ffe4e6; color: #e11d48; }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 14px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px;
+            text-align: center;
+            text-decoration: none;
+            color: #1e293b;
+            transition: all 0.2s ease;
+            border: 1px solid #e8eaed;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+            color: #1e293b;
+        }
+
+        .stat-number { font-size: 1.8rem; font-weight: 800; margin-bottom: 2px; }
+
+        .stat-card.blue .stat-number { color: #3b82f6; }
+        .stat-card.green .stat-number { color: #10b981; }
+        .stat-card.cyan .stat-number { color: #0891b2; }
+        .stat-card.amber .stat-number { color: #f59e0b; }
+        .stat-card.rose .stat-number { color: #f43f5e; }
+        .stat-card.slate .stat-number { color: #64748b; }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        /* Section title */
+        .section-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 14px;
+        }
+
+        /* Action cards */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 14px;
+        }
+
+        .action-card {
+            background: white;
+            border: 1px solid #e8eaed;
+            border-radius: 12px;
+            padding: 22px;
+            transition: all 0.2s ease;
+        }
+
+        .action-card:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+            transform: translateY(-2px);
+        }
+
+        .action-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            margin-bottom: 14px;
+        }
+
+        .action-icon.blue { background: #eff6ff; color: #3b82f6; }
+        .action-icon.green { background: #ecfdf5; color: #10b981; }
+        .action-icon.amber { background: #fffbeb; color: #f59e0b; }
+        .action-icon.rose { background: #fff1f2; color: #f43f5e; }
+        .action-icon.purple { background: #f5f3ff; color: #8b5cf6; }
+        .action-icon.cyan { background: #ecfeff; color: #0891b2; }
+        .action-icon.slate { background: #f1f5f9; color: #64748b; }
+
+        .action-card h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .action-card p {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-weight: 400;
+            margin-bottom: 14px;
+        }
+
+        .action-btns { display: flex; gap: 7px; flex-wrap: wrap; }
+
+        .btn-act {
+            padding: 6px 13px;
+            border-radius: 6px;
+            font-size: 0.76rem;
+            font-weight: 500;
+            font-family: 'Outfit', sans-serif;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-act.blue { background: #eff6ff; color: #3b82f6; }
+        .btn-act.blue:hover { background: #dbeafe; color: #2563eb; }
+        .btn-act.green { background: #ecfdf5; color: #10b981; }
+        .btn-act.green:hover { background: #d1fae5; color: #059669; }
+        .btn-act.amber { background: #fffbeb; color: #f59e0b; }
+        .btn-act.amber:hover { background: #fef3c7; color: #d97706; }
+        .btn-act.rose { background: #fff1f2; color: #f43f5e; }
+        .btn-act.rose:hover { background: #ffe4e6; color: #e11d48; }
+        .btn-act.purple { background: #f5f3ff; color: #8b5cf6; }
+        .btn-act.purple:hover { background: #ede9fe; color: #7c3aed; }
+        .btn-act.cyan { background: #ecfeff; color: #0891b2; }
+        .btn-act.cyan:hover { background: #cffafe; color: #0e7490; }
+        .btn-act.slate { background: #f1f5f9; color: #64748b; }
+        .btn-act.slate:hover { background: #e2e8f0; color: #475569; }
+
+        /* Commande */
+        .quick-banner {
+            background: white;
+            border: 1px solid #e8eaed;
+            border-radius: 12px;
+            padding: 22px 26px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+
+        .quick-banner h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 2px;
+        }
+
+        .quick-banner h3 i { color: #3b82f6; margin-right: 6px; }
+
+        .quick-banner p { color: #94a3b8; font-size: 0.8rem; }
+
+        .quick-banner .btns { display: flex; gap: 8px; }
+
+        .btn-qk {
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-qk.fill { background: #3b82f6; color: white; }
+        .btn-qk.fill:hover { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(59,130,246,0.25); }
+
+        .btn-qk.outline { background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; }
+        .btn-qk.outline:hover { background: #f1f5f9; color: #1e293b; }
+
+        .cmd-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+
+        .cmd-card {
+            background: white;
+            border: 1px solid #e8eaed;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            text-decoration: none;
+            color: #1e293b;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .cmd-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.05); color: #1e293b; }
+
+        .cmd-card.waiting { border-left-color: #94a3b8; }
+        .cmd-card.picking { border-left-color: #3b82f6; }
+        .cmd-card.partial { border-left-color: #f59e0b; }
+        .cmd-card.quai { border-left-color: #0891b2; }
+        .cmd-card.shipped { border-left-color: #10b981; }
+
+        .cmd-card .num { font-size: 1.7rem; font-weight: 800; }
+
+        .cmd-card.waiting .num { color: #94a3b8; }
+        .cmd-card.picking .num { color: #3b82f6; }
+        .cmd-card.partial .num { color: #f59e0b; }
+        .cmd-card.quai .num { color: #0891b2; }
+        .cmd-card.shipped .num { color: #10b981; }
+
+        .cmd-card .lbl {
+            font-size: 0.68rem;
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        @media (max-width: 992px) {
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+            .cmd-grid { grid-template-columns: repeat(3, 1fr); }
+            .actions-grid { grid-template-columns: 1fr; }
+            .dashboard-container { padding: 20px; }
+            .quick-banner { flex-direction: column; gap: 12px; text-align: center; }
+        }
+
+        @media (max-width: 576px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .cmd-grid { grid-template-columns: repeat(2, 1fr); }
+            .welcome-section { flex-direction: column; gap: 10px; align-items: flex-start; }
+        }
+    </style>
 </head>
 <body>
     <%- include('layouts/navbar') %>
-    <div class="container mt-4">
-        <h2>Tableau de bord</h2>
-        <p>Bienvenue, <strong><%= user.prenom %></strong> ! Rôle : <span class="badge bg-primary"><%= user.role %></span></p>
+    
+    <div class="dashboard-container">
+        <div class="welcome-section">
+            <div class="welcome-text">
+                <h1>Bonjour, <span><%= user.prenom %></span></h1>
+                <p>Tableau de bord — Vue d'ensemble de votre espace de travail</p>
+            </div>
+            <div class="role-badge role-<%= user.role %>"><%= user.role.replace(/_/g, ' ') %></div>
+        </div>
 
         <% if (user.role !== 'RESPONSABLE_COMMANDE') { %>
-        <div class="row mt-4">
-            <div class="col-md-2 mb-3">
-                <a href="/articles" class="text-decoration-none">
-                <div class="card text-white bg-primary text-center p-3">
-                    <h3><%= stats.articles %></h3>
-                    <p>Articles</p>
+        <div class="stats-grid">
+            <a href="/articles" class="stat-card blue"><div class="stat-number"><%= stats.articles %></div><div class="stat-label">Articles</div></a>
+            <a href="/zones" class="stat-card green"><div class="stat-number"><%= stats.zones %></div><div class="stat-label">Zones</div></a>
+            <a href="/emplacements" class="stat-card cyan"><div class="stat-number"><%= stats.emplacements %></div><div class="stat-label">Emplacements</div></a>
+            <a href="/commandes" class="stat-card amber"><div class="stat-number"><%= stats.commandes %></div><div class="stat-label">Commandes</div></a>
+            <a href="/reception" class="stat-card rose"><div class="stat-number"><%= stats.bonsReception %></div><div class="stat-label">Réceptions</div></a>
+            <a href="/inventaire" class="stat-card slate"><div class="stat-number"><%= stats.inventaires %></div><div class="stat-label">Inventaires</div></a>
+        </div>
+        <% } %>
+
+        <% if (user.role === 'ADMINISTRATEUR') { %>
+        <div class="section-title">Actions disponibles</div>
+        <div class="actions-grid">
+            <div class="action-card">
+                <div class="action-icon blue"><i class="bi bi-box-seam"></i></div>
+                <h3>Gestion des Articles</h3>
+                <p>Créer, modifier et supprimer les articles du catalogue</p>
+                <div class="action-btns">
+                    <a href="/articles" class="btn-act blue">Articles</a>
+                    <a href="/articles/stock" class="btn-act cyan">Stock</a>
+                    <a href="/categories" class="btn-act slate">Catégories</a>
                 </div>
-                </a>
             </div>
-            <div class="col-md-2 mb-3">
-                <a href="/zones" class="text-decoration-none">
-                <div class="card text-white bg-success text-center p-3">
-                    <h3><%= stats.zones %></h3>
-                    <p>Zones</p>
+            <div class="action-card">
+                <div class="action-icon green"><i class="bi bi-geo-alt"></i></div>
+                <h3>Gestion de l'Entrepôt</h3>
+                <p>Zones, emplacements, plan visuel et affectation</p>
+                <div class="action-btns">
+                    <a href="/zones" class="btn-act green">Zones</a>
+                    <a href="/emplacements" class="btn-act green">Emplacements</a>
+                    <a href="/emplacements/affecter" class="btn-act cyan">Affecter</a>
+                    <a href="/zones/plan" class="btn-act slate">Plan</a>
                 </div>
-                </a>
             </div>
-            <div class="col-md-2 mb-3">
-                <a href="/emplacements" class="text-decoration-none">
-                <div class="card text-white bg-info text-center p-3">
-                    <h3><%= stats.emplacements %></h3>
-                    <p>Emplacements</p>
+            <div class="action-card">
+                <div class="action-icon purple"><i class="bi bi-people"></i></div>
+                <h3>Gestion des Utilisateurs</h3>
+                <p>Créer et gérer les comptes des acteurs du WMS</p>
+                <div class="action-btns">
+                    <a href="/utilisateurs" class="btn-act purple">Utilisateurs</a>
                 </div>
-                </a>
             </div>
-            <div class="col-md-2 mb-3">
-                <a href="/commandes" class="text-decoration-none">
-                <div class="card text-white bg-warning text-center p-3">
-                    <h3><%= stats.commandes %></h3>
-                    <p>Commandes</p>
+            <div class="action-card">
+                <div class="action-icon slate"><i class="bi bi-arrow-left-right"></i></div>
+                <h3>Mouvements de Stock</h3>
+                <p>Superviser toutes les entrées, sorties et transferts</p>
+                <div class="action-btns">
+                    <a href="/mouvements" class="btn-act slate">Mouvements</a>
                 </div>
-                </a>
             </div>
-            <div class="col-md-2 mb-3">
-                <a href="/reception" class="text-decoration-none">
-                <div class="card text-white bg-danger text-center p-3">
-                    <h3><%= stats.bonsReception %></h3>
-                    <p>Réceptions</p>
+            <div class="action-card">
+                <div class="action-icon cyan"><i class="bi bi-graph-up"></i></div>
+                <h3>Taux de Rotation</h3>
+                <p>Analyser la rotation et la couverture du stock</p>
+                <div class="action-btns">
+                    <a href="/articles/roulement" class="btn-act cyan">Voir</a>
                 </div>
-                </a>
-            </div>
-            <div class="col-md-2 mb-3">
-                <a href="/inventaire" class="text-decoration-none">
-                <div class="card text-white bg-secondary text-center p-3">
-                    <h3><%= stats.inventaires %></h3>
-                    <p>Inventaires</p>
-                </div>
-                </a>
             </div>
         </div>
         <% } %>
 
-        <div class="row mt-3">
-            <!-- ADMINISTRATEUR -->
-            <% if (user.role === 'ADMINISTRATEUR') { %>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-box"></i> Gestion des Articles</h5>
-                    <p>Créer, modifier, supprimer les articles</p>
-                    <a href="/articles" class="btn btn-primary btn-sm">Articles</a>
-                    <a href="/categories" class="btn btn-outline-primary btn-sm">Catégories</a>
-                </div></div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-geo-alt"></i> Gestion des Emplacements</h5>
-                    <p>Zones, emplacements et plan visuel</p>
-                    <a href="/zones" class="btn btn-success btn-sm">Zones</a>
-                    <a href="/emplacements" class="btn btn-outline-success btn-sm">Emplacements</a>
-                    <a href="/zones/plan" class="btn btn-outline-success btn-sm">Plan</a>
-                </div></div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-people"></i> Gestion des Utilisateurs</h5>
-                    <p>Créer et gérer les comptes</p>
-                    <a href="/utilisateurs" class="btn btn-dark btn-sm">Utilisateurs</a>
-                </div></div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-arrow-left-right"></i> Mouvements de Stock</h5>
-                    <p>Superviser les entrées, sorties et transferts</p>
-                    <a href="/mouvements" class="btn btn-secondary btn-sm">Mouvements</a>
-                </div></div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-graph-up"></i> Taux de Rotation</h5>
-                    <p>Analyser la rotation du stock</p>
-                    <a href="/articles/roulement" class="btn btn-outline-info btn-sm">Voir</a>
-                </div></div>
-            </div>
-            <% } %>
-
-            <!-- RESPONSABLE_ENTREPOT -->
-            <% if (user.role === 'RESPONSABLE_ENTREPOT') { %>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-box"></i> Consultation du Stock</h5>
-                    <p>Voir l'état du stock des articles</p>
-                    <a href="/articles/stock" class="btn btn-primary btn-sm">Stock</a>
-                    <a href="/articles/roulement" class="btn btn-outline-info btn-sm">Taux de rotation</a>
-                </div></div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-geo-alt"></i> Entrepôt</h5>
-                    <p>Plan visuel et affectation</p>
-                    <a href="/zones/plan" class="btn btn-success btn-sm">Plan visuel</a>
-                    <a href="/emplacements/affecter" class="btn btn-outline-success btn-sm">Affecter</a>
-                </div></div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-arrow-left-right"></i> Mouvements de Stock</h5>
-                    <p>Superviser tous les flux de l'entrepôt</p>
-                    <a href="/mouvements" class="btn btn-secondary btn-sm">Mouvements</a>
-                </div></div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-clipboard-check"></i> Inventaire</h5>
-                    <p>Rapprochement et validation</p>
-                    <a href="/inventaire" class="btn btn-danger btn-sm">Inventaires</a>
-                </div></div>
-            </div>
-            <% } %>
-
-            <!-- RESPONSABLE_COMMANDE -->
-            <% if (user.role === 'RESPONSABLE_COMMANDE') { %>
-            <div class="col-12 mb-4">
-                <div class="card shadow"><div class="card-body text-center p-4">
-                    <h3><i class="bi bi-cart-check"></i> Actions rapides</h3>
-                    <p class="text-muted">Gérer les commandes clients</p>
-                    <a href="/commandes/create" class="btn btn-info btn-lg m-2">+ Nouvelle commande</a>
-                    <a href="/commandes" class="btn btn-outline-info btn-lg m-2">Toutes les commandes</a>
-                </div></div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <a href="/commandes?statut=EN_ATTENTE" class="text-decoration-none">
-                <div class="card text-white bg-secondary">
-                    <div class="card-body text-center p-3">
-                        <h3><%= stats.cmdEnAttente || 0 %></h3>
-                        <p class="mb-0">En attente</p>
-                    </div>
+        <% if (user.role === 'RESPONSABLE_ENTREPOT') { %>
+        <div class="section-title">Actions disponibles</div>
+        <div class="actions-grid">
+            <div class="action-card">
+                <div class="action-icon blue"><i class="bi bi-box-seam"></i></div>
+                <h3>Consultation du Stock</h3>
+                <p>Voir l'état du stock, le CUMP et les alertes</p>
+                <div class="action-btns">
+                    <a href="/articles/stock" class="btn-act blue">Stock</a>
+                    <a href="/articles/roulement" class="btn-act cyan">Taux de rotation</a>
                 </div>
-                </a>
             </div>
-            <div class="col-md-4 mb-3">
-                <a href="/commandes?statut=PICKING" class="text-decoration-none">
-                <div class="card text-white bg-primary">
-                    <div class="card-body text-center p-3">
-                        <h3><%= stats.cmdPicking || 0 %></h3>
-                        <p class="mb-0">En préparation</p>
-                    </div>
+            <div class="action-card">
+                <div class="action-icon green"><i class="bi bi-geo-alt"></i></div>
+                <h3>Entrepôt</h3>
+                <p>Plan visuel interactif et affectation des produits</p>
+                <div class="action-btns">
+                    <a href="/zones/plan" class="btn-act green">Plan visuel</a>
+                    <a href="/emplacements/affecter" class="btn-act green">Affecter</a>
                 </div>
-                </a>
             </div>
-            <div class="col-md-4 mb-3">
-                <a href="/commandes?statut=PARTIELLE" class="text-decoration-none">
-                <div class="card text-white bg-warning">
-                    <div class="card-body text-center p-3">
-                        <h3><%= stats.cmdPartielle || 0 %></h3>
-                        <p class="mb-0">⚠ Décision requise</p>
-                    </div>
+            <div class="action-card">
+                <div class="action-icon slate"><i class="bi bi-arrow-left-right"></i></div>
+                <h3>Mouvements de Stock</h3>
+                <p>Superviser tous les flux de l'entrepôt</p>
+                <div class="action-btns">
+                    <a href="/mouvements" class="btn-act slate">Mouvements</a>
                 </div>
-                </a>
             </div>
-            <div class="col-md-4 mb-3">
-                <a href="/commandes?statut=AU_QUAI" class="text-decoration-none">
-                <div class="card text-white bg-info">
-                    <div class="card-body text-center p-3">
-                        <h3><%= stats.cmdAuQuai || 0 %></h3>
-                        <p class="mb-0">Au quai</p>
-                    </div>
+            <div class="action-card">
+                <div class="action-icon rose"><i class="bi bi-clipboard-check"></i></div>
+                <h3>Inventaire</h3>
+                <p>Rapprochement automatique et validation</p>
+                <div class="action-btns">
+                    <a href="/inventaire" class="btn-act rose">Inventaires</a>
                 </div>
-                </a>
             </div>
-            <div class="col-md-4 mb-3">
-                <a href="/commandes?statut=EXPEDIEE" class="text-decoration-none">
-                <div class="card text-white bg-success">
-                    <div class="card-body text-center p-3">
-                        <h3><%= stats.cmdExpediee || 0 %></h3>
-                        <p class="mb-0">Expédiées ✓</p>
-                    </div>
+            <div class="action-card">
+                <div class="action-icon amber"><i class="bi bi-shield-check"></i></div>
+                <h3>Quarantaine</h3>
+                <p>Articles bloqués en attente de décision</p>
+                <div class="action-btns">
+                    <a href="/reception/quarantaine" class="btn-act amber">Quarantaine</a>
                 </div>
-                </a>
             </div>
-            <% } %>
-
-            <!-- MAGASINIER -->
-            <% if (user.role === 'MAGASINIER') { %>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-arrow-left-right"></i> Mouvements de Stock</h5>
-                    <p>Déplacer des articles entre emplacements</p>
-                    <a href="/mouvements" class="btn btn-secondary btn-sm">Mouvements</a>
-                    <a href="/mouvements/transfert" class="btn btn-outline-secondary btn-sm">Transfert</a>
-                </div></div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-cart-check"></i> Préparation Commandes</h5>
-                    <p>Prélever les articles et préparer les expéditions</p>
-                    <a href="/commandes/preparation" class="btn btn-info btn-sm">Commandes à préparer</a>
-                </div></div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-clipboard-check"></i> Inventaire</h5>
-                    <p>Planifier et saisir les écarts</p>
-                    <a href="/inventaire/planifier" class="btn btn-danger btn-sm">Planifier</a>
-                    <a href="/inventaire" class="btn btn-outline-danger btn-sm">Voir</a>
-                </div></div>
-            </div>
-            <% } %>
-
-            <!-- RESPONSABLE_RECEPTION -->
-            <% if (user.role === 'RESPONSABLE_RECEPTION') { %>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-truck"></i> Réception</h5>
-                    <p>Créer les bons de réception</p>
-                    <a href="/reception" class="btn btn-warning btn-sm">Bons</a>
-                    <a href="/reception/create" class="btn btn-outline-warning btn-sm">Nouveau</a>
-                </div></div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card"><div class="card-body">
-                    <h5><i class="bi bi-check-circle"></i> Qualité & Fournisseurs</h5>
-                    <p>Contrôle qualité et gestion fournisseurs</p>
-                    <a href="/reception/fournisseurs" class="btn btn-outline-warning btn-sm">Fournisseurs</a>
-                </div></div>
-            </div>
-            <% } %>
         </div>
+        <% } %>
+
+        <% if (user.role === 'RESPONSABLE_COMMANDE') { %>
+        <div class="quick-banner">
+            <div>
+                <h3><i class="bi bi-cart-check"></i> Actions rapides</h3>
+                <p>Gérer les commandes clients et les expéditions</p>
+            </div>
+            <div class="btns">
+                <a href="/commandes/create" class="btn-qk fill">+ Nouvelle commande</a>
+                <a href="/commandes" class="btn-qk outline">Toutes les commandes</a>
+                <a href="/commandes/chargement" class="btn-qk outline"><i class="bi bi-truck"></i> Chargement</a>
+            </div>
+        </div>
+        <div class="cmd-grid">
+            <a href="/commandes?statut=EN_ATTENTE" class="cmd-card waiting"><div class="num"><%= stats.cmdEnAttente || 0 %></div><div class="lbl">En attente</div></a>
+            <a href="/commandes?statut=PICKING" class="cmd-card picking"><div class="num"><%= stats.cmdPicking || 0 %></div><div class="lbl">En préparation</div></a>
+            <a href="/commandes?statut=PARTIELLE" class="cmd-card partial"><div class="num"><%= stats.cmdPartielle || 0 %></div><div class="lbl">⚠ Décision</div></a>
+            <a href="/commandes?statut=AU_QUAI" class="cmd-card quai"><div class="num"><%= stats.cmdAuQuai || 0 %></div><div class="lbl">Au quai</div></a>
+            <a href="/commandes?statut=EXPEDIEE" class="cmd-card shipped"><div class="num"><%= stats.cmdExpediee || 0 %></div><div class="lbl">Expédiées ✓</div></a>
+        </div>
+        <% } %>
+
+        <% if (user.role === 'MAGASINIER') { %>
+        <div class="section-title">Actions disponibles</div>
+        <div class="actions-grid">
+            <div class="action-card">
+                <div class="action-icon amber"><i class="bi bi-arrow-left-right"></i></div>
+                <h3>Transfert d'Articles</h3>
+                <p>Déplacer des articles entre emplacements</p>
+                <div class="action-btns">
+                    <a href="/mouvements" class="btn-act slate">Mouvements</a>
+                    <a href="/mouvements/transfert" class="btn-act amber">Transfert</a>
+                </div>
+            </div>
+            <div class="action-card">
+                <div class="action-icon cyan"><i class="bi bi-cart-check"></i></div>
+                <h3>Préparation Commandes</h3>
+                <p>Prélever les articles et préparer les expéditions</p>
+                <div class="action-btns">
+                    <a href="/commandes/preparation" class="btn-act cyan">Commandes à préparer</a>
+                </div>
+            </div>
+            <div class="action-card">
+                <div class="action-icon rose"><i class="bi bi-clipboard-check"></i></div>
+                <h3>Inventaire</h3>
+                <p>Planifier les inventaires et saisir les écarts</p>
+                <div class="action-btns">
+                    <a href="/inventaire/planifier" class="btn-act rose">Planifier</a>
+                    <a href="/inventaire" class="btn-act slate">Voir</a>
+                </div>
+            </div>
+        </div>
+        <% } %>
+
+        <% if (user.role === 'RESPONSABLE_RECEPTION') { %>
+        <div class="section-title">Actions disponibles</div>
+        <div class="actions-grid">
+            <div class="action-card">
+                <div class="action-icon amber"><i class="bi bi-truck"></i></div>
+                <h3>Réception</h3>
+                <p>Créer et gérer les bons de réception fournisseur</p>
+                <div class="action-btns">
+                    <a href="/reception" class="btn-act amber">Bons de réception</a>
+                    <a href="/reception/create" class="btn-act amber">+ Nouveau</a>
+                </div>
+            </div>
+            <div class="action-card">
+                <div class="action-icon rose"><i class="bi bi-check-circle"></i></div>
+                <h3>Qualité & Fournisseurs</h3>
+                <p>Contrôle qualité et gestion des fournisseurs</p>
+                <div class="action-btns">
+                    <a href="/reception/fournisseurs" class="btn-act rose">Fournisseurs</a>
+                    <a href="/reception/quarantaine" class="btn-act slate">Quarantaine</a>
+                </div>
+            </div>
+        </div>
+        <% } %>
     </div>
-    </body>
+</body>
 </html>
