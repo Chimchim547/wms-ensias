@@ -4,21 +4,26 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 router.get('/', async (req, res) => {
-  const zones = await prisma.zone.findMany({ include: { emplacements: true } });
+  const zones = await prisma.zone.findMany({ include: { emplacements: true, categorie: true } });
   res.render('zones/index', { zones });
 });
 
-router.get('/create', (req, res) => res.render('zones/create'));
+router.get('/create', async (req, res) => {
+  const categories = await prisma.categorie.findMany();
+  res.render('zones/create', { categories });
+});
 
 router.post('/create', async (req, res) => {
   const { code, type, dimensionMaxLongueur, dimensionMaxLargeur, dimensionMaxHauteur, poidsMax, couleur } = req.body;
+  const { categorieId } = req.body;
   await prisma.zone.create({
     data: {
       code, type, couleur,
       dimensionMaxLongueur: parseFloat(dimensionMaxLongueur),
       dimensionMaxLargeur: parseFloat(dimensionMaxLargeur),
       dimensionMaxHauteur: parseFloat(dimensionMaxHauteur),
-      poidsMax: parseFloat(poidsMax)
+      poidsMax: parseFloat(poidsMax),
+      categorieId: categorieId ? parseInt(categorieId) : null
     }
   });
   res.redirect('/zones');
@@ -26,7 +31,8 @@ router.post('/create', async (req, res) => {
 
 router.get('/edit/:id', async (req, res) => {
   const zone = await prisma.zone.findUnique({ where: { id: parseInt(req.params.id) } });
-  res.render('zones/edit', { zone });
+  const categories = await prisma.categorie.findMany();
+  res.render('zones/edit', { zone, categories });
 });
 
 router.post('/edit/:id', async (req, res) => {
@@ -38,7 +44,8 @@ router.post('/edit/:id', async (req, res) => {
       dimensionMaxLongueur: parseFloat(dimensionMaxLongueur),
       dimensionMaxLargeur: parseFloat(dimensionMaxLargeur),
       dimensionMaxHauteur: parseFloat(dimensionMaxHauteur),
-      poidsMax: parseFloat(poidsMax)
+      poidsMax: parseFloat(poidsMax),
+      categorieId: req.body.categorieId ? parseInt(req.body.categorieId) : null
     }
   });
   res.redirect('/zones');
@@ -51,44 +58,41 @@ router.post('/delete/:id', async (req, res) => {
 
 router.get('/plan', async (req, res) => {
   const zones = await prisma.zone.findMany({
-    include: { emplacements: { include: { articles: { include: { mouvements: true } } } } }
+    include: { emplacements: { include: { stockEmplacements: { include: { article: true } } } } }
   });
   
-  // Calculer capacité et remplissage pour chaque emplacement
   zones.forEach(z => {
     z.emplacements.forEach(e => {
       const volEmp = e.longueur * e.largeur * e.hauteur;
       
-      if (e.articles.length > 0) {
-        const article = e.articles[0];
-        const volArticle = article.longueur * article.largeur * article.hauteur;
+      if (e.stockEmplacements && e.stockEmplacements.length > 0) {
+        const se = e.stockEmplacements[0];
+        const article = se.article;
+        const totalQte = e.stockEmplacements.reduce((sum, s) => sum + s.quantite, 0);
         
-        // Capacité max basée sur volume et poids
-        const capVolume = volArticle > 0 ? Math.floor(volEmp / volArticle) : 1;
+        const volArt = article.longueur * article.largeur * article.hauteur;
+        const capVolume = volArt > 0 ? Math.floor(volEmp / volArt) : 1;
         const capPoids = article.poids > 0 ? Math.floor(e.poidsMax / article.poids) : capVolume;
         const capaciteMax = Math.min(capVolume, capPoids);
         
-        // Stock actuel
-        const entrees = article.mouvements.filter(m => m.type === 'ENTREE').reduce((sum, m) => sum + m.quantite, 0);
-        const sorties = article.mouvements.filter(m => m.type === 'SORTIE').reduce((sum, m) => sum + m.quantite, 0);
-        const stockActuel = entrees - sorties;
-        
-        // Taux de remplissage
-        const tauxRemplissage = capaciteMax > 0 ? Math.round((stockActuel / capaciteMax) * 100) : 100;
-        
         e.capaciteMax = capaciteMax;
-        e.stockActuel = stockActuel;
-        e.tauxRemplissage = Math.min(tauxRemplissage, 100);
+        e.stockActuel = Math.min(totalQte, capaciteMax);
+        e.tauxRemplissage = capaciteMax > 0 ? Math.round((e.stockActuel / capaciteMax) * 100) : 100;
+        e.articleRef = article.reference;
+        e.articleDesignation = article.designation;
         
-        if (stockActuel >= capaciteMax) {
+        if (totalQte >= capaciteMax) {
           e.statut = 'PLEIN';
-        } else {
+        } else if (totalQte > 0) {
           e.statut = 'PARTIEL';
+        } else {
+          e.statut = 'LIBRE';
         }
       } else {
         e.capaciteMax = 0;
         e.stockActuel = 0;
         e.tauxRemplissage = 0;
+        e.articleRef = null;
         e.statut = 'LIBRE';
       }
     });

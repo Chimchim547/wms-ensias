@@ -17,23 +17,66 @@
         </div>
         <table class="table table-striped">
             <thead class="table-dark">
-                <tr><th>Code</th><th>Zone</th><th>Dimensions</th><th>Poids max</th><th>Statut</th><th>Article</th><th>Actions</th></tr>
+                <tr>
+                    <th>Code</th>
+                    <th>Zone</th>
+                    <th>Dimensions</th>
+                    <th>Poids max</th>
+                    <th>Statut</th>
+                    <th>Article</th>
+                    <th>Quantité</th>
+                    <th>Capacité</th>
+                    <th>Actions</th>
+                </tr>
             </thead>
             <tbody>
                 <% emplacements.forEach(e => { %>
-                <tr>
-                    <td><%= e.code %></td>
-                    <td><%= e.zone.code %></td>
-                    <td><%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm</td>
-                    <td><%= e.poidsMax %> kg</td>
-                    <td><span class="badge bg-<%= e.articles.length > 0 ? 'danger' : 'success' %>"><%= e.articles.length > 0 ? 'Occupé' : 'Libre' %></span></td>
-                    <td><%= e.articles.length > 0 ? e.articles.map(a => a.reference).join(', ') : '-' %></td>
-                    <td>
-                        <form action="/emplacements/delete/<%= e.id %>" method="POST" class="d-inline">
-                            <button class="btn btn-sm btn-danger" onclick="return confirm('Supprimer ?')">Supprimer</button>
-                        </form>
-                    </td>
-                </tr>
+                    <% if (e.stockEmplacements && e.stockEmplacements.length > 0) { %>
+                        <%
+                        const totalQte = e.stockEmplacements.reduce((sum, s) => sum + s.quantite, 0);
+                        const art = e.stockEmplacements[0].article;
+                        const volEmp = e.longueur * e.largeur * e.hauteur;
+                        const volArt = art.longueur * art.largeur * art.hauteur;
+                        const capVol = volArt > 0 ? Math.floor(volEmp / volArt) : 1;
+                        const capPoids = art.poids > 0 ? Math.floor(e.poidsMax / art.poids) : capVol;
+                        const capMax = Math.min(capVol, capPoids);
+                        %>
+                        <% e.stockEmplacements.forEach((se, idx) => { %>
+                        <tr class="table-warning">
+                            <td><%= e.code %></td>
+                            <td><%= e.zone.code %></td>
+                            <td><%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm</td>
+                            <td><%= e.poidsMax %> kg</td>
+                            <td>
+                                <% if (totalQte >= capMax) { %>
+                                    <span class="badge bg-danger">Plein</span>
+                                <% } else { %>
+                                    <span class="badge bg-warning text-dark">Partiel</span>
+                                <% } %>
+                            </td>
+                            <td><%= se.article.reference %> - <%= se.article.designation %></td>
+                            <td><strong><%= se.quantite %></strong></td>
+                            <td><%= totalQte %>/<%= capMax %></td>
+                            <td>
+                                <a href="/emplacements/affecter" class="btn btn-sm btn-outline-primary">Affecter</a>
+                            </td>
+                        </tr>
+                        <% }) %>
+                    <% } else { %>
+                    <tr>
+                        <td><%= e.code %></td>
+                        <td><%= e.zone.code %></td>
+                        <td><%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm</td>
+                        <td><%= e.poidsMax %> kg</td>
+                        <td><span class="badge bg-success">Libre</span></td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>
+                            <a href="/emplacements/affecter" class="btn btn-sm btn-outline-primary">Affecter</a>
+                        </td>
+                    </tr>
+                    <% } %>
                 <% }) %>
             </tbody>
         </table>

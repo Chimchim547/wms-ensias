@@ -17,13 +17,14 @@
         </div>
         <table class="table table-striped">
             <thead class="table-dark">
-                <tr><th>Code</th><th>Type</th><th>Dimensions max</th><th>Poids max</th><th>Couleur</th><th>Emplacements</th><th>Actions</th></tr>
+                <tr><th>Code</th><th>Type</th><th>Catégorie</th><th>Dimensions max</th><th>Poids max</th><th>Couleur</th><th>Emplacements</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 <% zones.forEach(z => { %>
                 <tr>
                     <td><%= z.code %></td>
                     <td><%= z.type %></td>
+                    <td><%= z.categorie ? z.categorie.nom : '-' %></td>
                     <td><%= z.dimensionMaxLongueur %>x<%= z.dimensionMaxLargeur %>x<%= z.dimensionMaxHauteur %> cm</td>
                     <td><%= z.poidsMax %> kg</td>
                     <td><span style="display:inline-block;width:20px;height:20px;background:<%= z.couleur %>;border:1px solid #ccc;"></span> <%= z.couleur %></td>

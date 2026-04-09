@@ -24,7 +24,6 @@ router.post('/create', async (req, res) => {
     const qcmd = Array.isArray(quantitesCommandees) ? quantitesCommandees : [quantitesCommandees];
     const qrec = Array.isArray(quantitesRecues) ? quantitesRecues : [quantitesRecues];
     
-    let ecartDetecte = false;
     let surplus = false;
     let manquant = false;
     const ecarts = [];
@@ -34,8 +33,8 @@ router.post('/create', async (req, res) => {
       const qr = parseInt(qrec[i]);
       const ecart = qr - qc;
       
-      if (ecart < 0) { manquant = true; ecartDetecte = true; }
-      if (ecart > 0) { surplus = true; ecartDetecte = true; }
+      if (ecart < 0) manquant = true;
+      if (ecart > 0) surplus = true;
       
       const article = await prisma.article.findUnique({ where: { id: parseInt(ids[i]) } });
       if (ecart !== 0) {
@@ -201,6 +200,7 @@ router.post('/controle/:id', async (req, res) => {
     }
   }
 
+  // Notifications selon le résultat
   if (resultat === 'conforme') {
     await prisma.notification.create({
       data: {
@@ -236,6 +236,7 @@ router.post('/controle/:id', async (req, res) => {
     });
   }
 
+  // Notification retour fournisseur
   if (articlesRetour.length > 0) {
     const listeRetour = articlesRetour.map(a => a.article.reference + ' - ' + a.article.designation + ' (qte: ' + a.quantite + ')').join(', ');
     await prisma.notification.create({
@@ -254,6 +255,7 @@ router.post('/controle/:id', async (req, res) => {
     });
   }
 
+  // Notification quarantaine
   if (articlesQuarantaine.length > 0) {
     const listeQuarantaine = articlesQuarantaine.map(a => a.article.reference + ' - ' + a.article.designation + ' (qte: ' + a.quantite + ')').join(', ');
     await prisma.notification.create({
@@ -265,6 +267,7 @@ router.post('/controle/:id', async (req, res) => {
     });
   }
 
+  // Vérifier backorders
   for (let i = 0; i < bon.lignes.length; i++) {
     const qa = parseInt(qas[i]) || 0;
     if (qa > 0) {
@@ -280,6 +283,40 @@ router.post('/controle/:id', async (req, res) => {
               message: `🔔 Réapprovisionnement : ${article.reference} - ${article.designation} est de nouveau en stock ! Le backorder ${bo.numero} peut être traité.`,
               lien: '/commandes',
               destinataireRole: 'RESPONSABLE_COMMANDE'
+            }
+          });
+        }
+      }
+    }
+  }
+
+  // Vérifier si le stock dépasse la capacité des emplacements
+  for (let i = 0; i < bon.lignes.length; i++) {
+    const qa = parseInt(qas[i]) || 0;
+    if (qa > 0) {
+      const articleCheck = await prisma.article.findUnique({
+        where: { id: bon.lignes[i].articleId },
+        include: { emplacement: true, mouvements: true }
+      });
+      
+      if (articleCheck.emplacement) {
+        const volEmp = articleCheck.emplacement.longueur * articleCheck.emplacement.largeur * articleCheck.emplacement.hauteur;
+        const volArt = articleCheck.longueur * articleCheck.largeur * articleCheck.hauteur;
+        const capVolume = volArt > 0 ? Math.floor(volEmp / volArt) : 1;
+        const capPoids = articleCheck.poids > 0 ? Math.floor(articleCheck.emplacement.poidsMax / articleCheck.poids) : capVolume;
+        const capaciteMax = Math.min(capVolume, capPoids);
+        
+        const entrees = articleCheck.mouvements.filter(m => m.type === 'ENTREE').reduce((sum, m) => sum + m.quantite, 0);
+        const sorties = articleCheck.mouvements.filter(m => m.type === 'SORTIE').reduce((sum, m) => sum + m.quantite, 0);
+        const stockActuel = entrees - sorties;
+        
+        if (stockActuel > capaciteMax) {
+          const excedent = stockActuel - capaciteMax;
+          await prisma.notification.create({
+            data: {
+              message: `📦 CAPACITÉ DÉPASSÉE - ${articleCheck.reference} : stock ${stockActuel} dépasse la capacité de ${articleCheck.emplacement.code} (max ${capaciteMax}). ${excedent} unité(s) à affecter à un autre emplacement.`,
+              lien: '/emplacements/affecter',
+              destinataireRole: 'RESPONSABLE_ENTREPOT'
             }
           });
         }
@@ -573,10 +610,8 @@ router.get('/bon-retour/:id', async (req, res) => {
 
   if (!bon) return res.status(404).send('Bon introuvable');
 
-  // Collecter les articles à retourner
   const articlesRetour = [];
   bon.lignes.forEach(ligne => {
-    // Retour surplus (observations contient "Surplus" + "refusé")
     if (ligne.observations && ligne.observations.includes('Surplus') && ligne.observations.includes('refus')) {
       const match = ligne.observations.match(/Surplus de (\d+)/);
       if (match) {
@@ -591,7 +626,6 @@ router.get('/bon-retour/:id', async (req, res) => {
       }
     }
     
-    // Retour qualité (actionNonConforme = retour_fournisseur)
     if (ligne.actionNonConforme === 'retour_fournisseur' && ligne.quantiteRefusee > 0) {
       let motif = 'Non conforme';
       if (ligne.observations) {
@@ -610,7 +644,6 @@ router.get('/bon-retour/:id', async (req, res) => {
       });
     }
     
-    // Retour après quarantaine
     if (ligne.statutQualite === 'RETOUR_APRES_QUARANTAINE' && ligne.quantiteRefusee > 0) {
       let motif = 'Rejeté après quarantaine';
       if (ligne.observations) {
@@ -666,19 +699,19 @@ router.get('/bon-retour/:id', async (req, res) => {
   doc.moveDown();
 
   doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-  const tableTop = doc.y + 10;
+  const tableTop2 = doc.y + 10;
   doc.font('Helvetica-Bold').fontSize(10);
-  doc.text('Reference', 50, tableTop, { width: 70 });
-  doc.text('Designation', 120, tableTop, { width: 130 });
-  doc.text('Qte', 250, tableTop, { width: 30 });
-  doc.text('Prix unit.', 280, tableTop, { width: 60 });
-  doc.text('Type', 340, tableTop, { width: 60 });
-  doc.text('Motif', 400, tableTop, { width: 150 });
+  doc.text('Reference', 50, tableTop2, { width: 70 });
+  doc.text('Designation', 120, tableTop2, { width: 130 });
+  doc.text('Qte', 250, tableTop2, { width: 30 });
+  doc.text('Prix unit.', 280, tableTop2, { width: 60 });
+  doc.text('Type', 340, tableTop2, { width: 60 });
+  doc.text('Motif', 400, tableTop2, { width: 150 });
   
-  doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+  doc.moveTo(50, tableTop2 + 15).lineTo(550, tableTop2 + 15).stroke();
   
   doc.font('Helvetica').fontSize(8);
-  let y2 = tableTop + 25;
+  let y2 = tableTop2 + 25;
   let totalRetour = 0;
   
   articlesRetour.forEach(a => {

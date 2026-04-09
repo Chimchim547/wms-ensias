@@ -9,11 +9,11 @@
     <%- include('../layouts/navbar') %>
     <div class="container mt-4">
         <h2>Affecter un Article à un Emplacement</h2>
-        <p class="text-muted">Le système filtre automatiquement les emplacements compatibles selon les dimensions et le poids de l'article.</p>
+        <p class="text-muted">Le système filtre automatiquement les emplacements compatibles selon la catégorie, les dimensions et le poids total de l'article.</p>
         
-        <form action="/emplacements/affecter" method="POST" class="col-md-8">
+        <form action="/emplacements/affecter" method="POST" class="col-md-10">
             <div class="mb-3">
-                <label class="form-label">Article (non affecté)</label>
+                <label class="form-label">Article (non affecté, en stock)</label>
                 <select name="articleId" class="form-select" id="articleSelect" required>
                     <option value="">-- Sélectionnez un article --</option>
                     <% articles.forEach(a => { %>
@@ -22,8 +22,16 @@
                         data-largeur="<%= a.largeur %>" 
                         data-hauteur="<%= a.hauteur %>" 
                         data-poids="<%= a.poids %>"
-                        data-compatibles="<%= JSON.stringify(a.compatibles.map(c => c.id)) %>">
-                        <%= a.reference %> - <%= a.designation %> (<%= a.longueur %>x<%= a.largeur %>x<%= a.hauteur %> cm, <%= a.poids %> kg)
+                        data-stock="<%= a.stockActuel %>"
+                        data-poidstotal="<%= a.poidsTotal %>"
+                        data-categorie="<%= a.categorie ? a.categorie.nom : '-' %>"
+                        data-capacitetotale="<%= a.capaciteTotale %>"
+                        data-repartition="<%= a.besoinRepartition %>"
+                        data-excedent="<%= a.excedent || 0 %>"
+                        data-dejastocke="<%= a.dejaStocke || 0 %>"
+                        data-emplacementactuel="<%= a.emplacementActuel || '' %>"
+                        data-compatibles="<%= JSON.stringify(a.compatibles.map(c => ({ id: c.id, capaciteMax: c.capaciteMax }))) %>">
+                        <%= a.reference %> - <%= a.designation %> | <%= a.excedent ? 'Excédent: ' + a.excedent + ' (stock ' + a.stockActuel + ', déjà ' + a.dejaStocke + ' dans ' + a.emplacementActuel + ')' : 'Stock: ' + a.stockActuel %> | <%= a.categorie ? a.categorie.nom : '-' %>
                     </option>
                     <% }) %>
                 </select>
@@ -32,14 +40,28 @@
             <!-- Détails de l'article sélectionné -->
             <div id="articleDetails" class="card mb-3" style="display:none;">
                 <div class="card-body">
-                    <h6>Dimensions de l'article sélectionné :</h6>
+                    <h6>Article sélectionné :</h6>
                     <div class="row">
-                        <div class="col-md-3"><span class="badge bg-primary p-2" id="artLongueur"></span></div>
-                        <div class="col-md-3"><span class="badge bg-primary p-2" id="artLargeur"></span></div>
-                        <div class="col-md-3"><span class="badge bg-primary p-2" id="artHauteur"></span></div>
-                        <div class="col-md-3"><span class="badge bg-primary p-2" id="artPoids"></span></div>
+                        <div class="col-md-2"><span class="badge bg-info p-2" id="artCategorie"></span></div>
+                        <div class="col-md-2"><span class="badge bg-success p-2" id="artStock"></span></div>
+                        <div class="col-md-2"><span class="badge bg-primary p-2" id="artLongueur"></span></div>
+                        <div class="col-md-2"><span class="badge bg-primary p-2" id="artLargeur"></span></div>
+                        <div class="col-md-2"><span class="badge bg-primary p-2" id="artHauteur"></span></div>
+                        <div class="col-md-2"><span class="badge bg-warning text-dark p-2" id="artPoids"></span></div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-4"><span class="badge bg-dark p-2" id="artPoidsTotal"></span></div>
+                        <div class="col-md-4"><span class="badge bg-secondary p-2" id="artCapaciteTotale"></span></div>
+                        <div class="col-md-4" id="artEmplacementActuelDiv" style="display:none;"><span class="badge bg-danger p-2" id="artEmplacementActuel"></span></div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Alerte répartition -->
+            <div id="alerteRepartition" class="alert alert-warning" style="display:none;">
+                <strong>⚠ Répartition nécessaire !</strong> Aucun emplacement ne peut contenir la totalité du stock. 
+                Affectez à l'emplacement avec la plus grande capacité, puis réaffectez le reste.
+                <br><span id="repartitionDetails"></span>
             </div>
 
             <div class="mb-3">
@@ -47,8 +69,8 @@
                 <select name="emplacementId" class="form-select" id="emplacementSelect" required>
                     <option value="">-- Sélectionnez d'abord un article --</option>
                 </select>
-                <div id="noCompatible" class="alert alert-warning mt-2" style="display:none;">
-                    Aucun emplacement disponible pour cet article — dimensions ou poids trop élevés. Créez un emplacement plus grand ou libérez un emplacement existant.
+                <div id="noCompatible" class="alert alert-danger mt-2" style="display:none;">
+                    Aucun emplacement disponible pour cet article. Vérifiez la catégorie de la zone ou les dimensions.
                 </div>
                 <div id="compatibleCount" class="text-success mt-1" style="display:none;"></div>
             </div>
@@ -57,22 +79,24 @@
             <a href="/emplacements" class="btn btn-secondary">Annuler</a>
         </form>
 
-        <!-- Tableau récapitulatif de tous les emplacements libres -->
+        <!-- Tableau récapitulatif -->
         <div class="mt-4">
             <h5>Emplacements libres disponibles</h5>
             <table class="table table-sm table-striped">
                 <thead class="table-dark">
-                    <tr><th>Code</th><th>Zone</th><th>Longueur</th><th>Largeur</th><th>Hauteur</th><th>Poids max</th></tr>
+                    <tr><th>Code</th><th>Zone</th><th>Catégorie zone</th><th>Longueur</th><th>Largeur</th><th>Hauteur</th><th>Poids max</th><th>Capacité</th></tr>
                 </thead>
                 <tbody>
                     <% emplacements.forEach(e => { %>
                     <tr id="emp-row-<%= e.id %>">
                         <td><%= e.code %></td>
                         <td><%= e.zone.code %></td>
+                        <td><%= e.zone.categorie ? e.zone.categorie.nom : 'Toutes' %></td>
                         <td><%= e.longueur %> cm</td>
                         <td><%= e.largeur %> cm</td>
                         <td><%= e.hauteur %> cm</td>
                         <td><%= e.poidsMax %> kg</td>
+                        <td id="emp-cap-<%= e.id %>">-</td>
                     </tr>
                     <% }) %>
                 </tbody>
@@ -85,6 +109,7 @@
         id: e.id,
         code: e.code,
         zone: e.zone.code,
+        categorie: e.zone.categorie ? e.zone.categorie.nom : 'Toutes',
         longueur: e.longueur,
         largeur: e.largeur,
         hauteur: e.hauteur,
@@ -98,17 +123,20 @@
         const noCompatible = document.getElementById('noCompatible');
         const compatibleCount = document.getElementById('compatibleCount');
         const btnAffecter = document.getElementById('btnAffecter');
+        const alerteRepartition = document.getElementById('alerteRepartition');
         
-        // Reset
         emplacementSelect.innerHTML = '';
         noCompatible.style.display = 'none';
         compatibleCount.style.display = 'none';
+        alerteRepartition.style.display = 'none';
         btnAffecter.disabled = true;
 
-        // Reset tableau highlighting
+        // Reset tableau
         emplacementsData.forEach(e => {
             const row = document.getElementById('emp-row-' + e.id);
             if (row) { row.style.background = ''; row.style.fontWeight = ''; }
+            const cap = document.getElementById('emp-cap-' + e.id);
+            if (cap) cap.textContent = '-';
         });
 
         if (!this.value) {
@@ -117,42 +145,69 @@
             return;
         }
 
-        // Afficher détails article
-        const longueur = selected.dataset.longueur;
-        const largeur = selected.dataset.largeur;
-        const hauteur = selected.dataset.hauteur;
-        const poids = selected.dataset.poids;
+        // Afficher détails
+        document.getElementById('artCategorie').textContent = selected.dataset.categorie;
         
-        document.getElementById('artLongueur').textContent = 'L: ' + longueur + ' cm';
-        document.getElementById('artLargeur').textContent = 'l: ' + largeur + ' cm';
-        document.getElementById('artHauteur').textContent = 'H: ' + hauteur + ' cm';
-        document.getElementById('artPoids').textContent = 'P: ' + poids + ' kg';
+        const excedent = parseInt(selected.dataset.excedent);
+        const dejaStocke = parseInt(selected.dataset.dejastocke);
+        const emplacementActuel = selected.dataset.emplacementactuel;
+        
+        if (excedent > 0) {
+            document.getElementById('artStock').textContent = 'Excédent: ' + excedent + ' à affecter';
+            document.getElementById('artStock').className = 'badge bg-warning text-dark p-2';
+            document.getElementById('artEmplacementActuelDiv').style.display = 'block';
+            document.getElementById('artEmplacementActuel').textContent = 'Déjà ' + dejaStocke + ' dans ' + emplacementActuel;
+        } else {
+            document.getElementById('artStock').textContent = 'Stock: ' + selected.dataset.stock;
+            document.getElementById('artStock').className = 'badge bg-success p-2';
+            document.getElementById('artEmplacementActuelDiv').style.display = 'none';
+        }
+        
+        document.getElementById('artLongueur').textContent = 'L: ' + selected.dataset.longueur + ' cm';
+        document.getElementById('artLargeur').textContent = 'l: ' + selected.dataset.largeur + ' cm';
+        document.getElementById('artHauteur').textContent = 'H: ' + selected.dataset.hauteur + ' cm';
+        document.getElementById('artPoids').textContent = 'P unitaire: ' + selected.dataset.poids + ' kg';
+        document.getElementById('artPoidsTotal').textContent = 'Poids total: ' + selected.dataset.poidstotal + ' kg';
+        document.getElementById('artCapaciteTotale').textContent = 'Capacité dispo: ' + selected.dataset.capacitetotale + ' unités';
         articleDetails.style.display = 'block';
 
-        // Filtrer emplacements compatibles
-        const compatibleIds = JSON.parse(selected.dataset.compatibles);
+        // Filtrer compatibles
+        const compatibles = JSON.parse(selected.dataset.compatibles);
+        const stockAAffecter = excedent > 0 ? excedent : parseInt(selected.dataset.stock);
+        const besoinRepartition = selected.dataset.repartition === 'true';
         
-        if (compatibleIds.length === 0) {
+        if (compatibles.length === 0) {
             emplacementSelect.innerHTML = '<option value="">Aucun emplacement compatible</option>';
             noCompatible.style.display = 'block';
             return;
         }
 
-        compatibleCount.textContent = compatibleIds.length + ' emplacement(s) compatible(s) trouvé(s)';
+        // Alerte répartition
+        if (besoinRepartition) {
+            alerteRepartition.style.display = 'block';
+            const capTotal = parseInt(selected.dataset.capacitetotale);
+            document.getElementById('repartitionDetails').textContent = 
+                'À affecter: ' + stockAAffecter + ' unités | Capacité max par emplacement: ' + 
+                Math.max(...compatibles.map(c => c.capaciteMax)) + ' | Capacité totale disponible: ' + capTotal;
+        }
+
+        compatibleCount.textContent = compatibles.length + ' emplacement(s) compatible(s) — catégorie: ' + selected.dataset.categorie;
         compatibleCount.style.display = 'block';
 
         emplacementSelect.innerHTML = '<option value="">-- Choisir un emplacement --</option>';
         
-        emplacementsData.forEach(e => {
-            if (compatibleIds.includes(e.id)) {
+        compatibles.forEach(c => {
+            const emp = emplacementsData.find(e => e.id === c.id);
+            if (emp) {
                 const option = document.createElement('option');
-                option.value = e.id;
-                option.textContent = e.code + ' - Zone ' + e.zone + ' (' + e.longueur + 'x' + e.largeur + 'x' + e.hauteur + ' cm, max ' + e.poidsMax + ' kg)';
+                option.value = c.id;
+                option.textContent = emp.code + ' - Zone ' + emp.zone + ' | Capacité: ' + c.capaciteMax + '/' + stockAAffecter + ' unités (' + emp.longueur + 'x' + emp.largeur + 'x' + emp.hauteur + ' cm, max ' + emp.poidsMax + ' kg)';
                 emplacementSelect.appendChild(option);
 
-                // Highlight dans le tableau
-                const row = document.getElementById('emp-row-' + e.id);
+                const row = document.getElementById('emp-row-' + c.id);
                 if (row) { row.style.background = '#d4edda'; row.style.fontWeight = 'bold'; }
+                const cap = document.getElementById('emp-cap-' + c.id);
+                if (cap) cap.textContent = c.capaciteMax + '/' + stockAAffecter;
             }
         });
 

@@ -224,12 +224,10 @@
 
         <% let totalEmp = 0, totalLibre = 0, totalOccupe = 0;
            let zonesReception = [], zonesStockage = [], zonesExpedition = [];
-           let totalPartiel = 0;
            zones.forEach(z => {
                z.emplacements.forEach(e => {
                    totalEmp++;
-                   if(e.statut === 'PLEIN') totalOccupe++;
-                   else if(e.statut === 'PARTIEL') { totalPartiel++; totalOccupe++; }
+                   if(e.statut === 'PLEIN' || e.statut === 'PARTIEL') totalOccupe++;
                    else totalLibre++;
                });
                if(z.type === 'reception') zonesReception.push(z);
@@ -278,8 +276,8 @@
                                 <div class="emp-box <%= e.statut === 'PLEIN' ? 'emp-occupe' : e.statut === 'PARTIEL' ? 'emp-partiel' : 'emp-libre' %>">
                                     <div class="tooltip-content">
                                         <%= e.code %> | <%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm | Max: <%= e.poidsMax %> kg
-                                        <% if(e.articles.length > 0) { %>
-                                            <br>Article: <%= e.articles[0].reference %> - <%= e.articles[0].designation %>
+                                        <% if(e.articleRef) { %>
+                                            <br>Article: <%= e.articleRef %> - <%= e.articleDesignation %>
                                             <br>Stock: <%= e.stockActuel %> / <%= e.capaciteMax %> (<%= e.tauxRemplissage %>%)
                                         <% } %>
                                     </div>
@@ -291,8 +289,8 @@
                                     <% } else { %>
                                         <div class="emp-status">○ LIBRE</div>
                                     <% } %>
-                                    <% if(e.articles.length > 0) { %>
-                                        <div class="emp-article"><%= e.articles[0].reference %></div>
+                                    <% if(e.articleRef) { %>
+                                        <div class="emp-article"><%= e.articleRef %></div>
                                         <div class="emp-dims"><%= e.stockActuel %>/<%= e.capaciteMax %></div>
                                     <% } %>
                                 </div>
@@ -325,11 +323,11 @@
                             <div class="zone-dims">Max: <%= z.dimensionMaxLongueur %>x<%= z.dimensionMaxLargeur %>x<%= z.dimensionMaxHauteur %> cm | <%= z.poidsMax %> kg</div>
                             <div class="emp-grid">
                                 <% z.emplacements.forEach(e => { %>
-                                 <div class="emp-box <%= e.statut === 'PLEIN' ? 'emp-occupe' : e.statut === 'PARTIEL' ? 'emp-partiel' : 'emp-libre' %>">
+                                <div class="emp-box <%= e.statut === 'PLEIN' ? 'emp-occupe' : e.statut === 'PARTIEL' ? 'emp-partiel' : 'emp-libre' %>">
                                     <div class="tooltip-content">
                                         <%= e.code %> | <%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm | Max: <%= e.poidsMax %> kg
-                                        <% if(e.articles.length > 0) { %>
-                                            <br>Article: <%= e.articles[0].reference %> - <%= e.articles[0].designation %>
+                                        <% if(e.articleRef) { %>
+                                            <br>Article: <%= e.articleRef %> - <%= e.articleDesignation %>
                                             <br>Stock: <%= e.stockActuel %> / <%= e.capaciteMax %> (<%= e.tauxRemplissage %>%)
                                         <% } %>
                                     </div>
@@ -341,8 +339,8 @@
                                     <% } else { %>
                                         <div class="emp-status">○ LIBRE</div>
                                     <% } %>
-                                    <% if(e.articles.length > 0) { %>
-                                        <div class="emp-article"><%= e.articles[0].reference %></div>
+                                    <% if(e.articleRef) { %>
+                                        <div class="emp-article"><%= e.articleRef %></div>
                                         <div class="emp-dims"><%= e.stockActuel %>/<%= e.capaciteMax %></div>
                                     <% } %>
                                 </div>
@@ -377,8 +375,8 @@
                                 <div class="emp-box <%= e.statut === 'PLEIN' ? 'emp-occupe' : e.statut === 'PARTIEL' ? 'emp-partiel' : 'emp-libre' %>">
                                     <div class="tooltip-content">
                                         <%= e.code %> | <%= e.longueur %>x<%= e.largeur %>x<%= e.hauteur %> cm | Max: <%= e.poidsMax %> kg
-                                        <% if(e.articles.length > 0) { %>
-                                            <br>Article: <%= e.articles[0].reference %> - <%= e.articles[0].designation %>
+                                        <% if(e.articleRef) { %>
+                                            <br>Article: <%= e.articleRef %> - <%= e.articleDesignation %>
                                             <br>Stock: <%= e.stockActuel %> / <%= e.capaciteMax %> (<%= e.tauxRemplissage %>%)
                                         <% } %>
                                     </div>
@@ -390,8 +388,8 @@
                                     <% } else { %>
                                         <div class="emp-status">○ LIBRE</div>
                                     <% } %>
-                                    <% if(e.articles.length > 0) { %>
-                                        <div class="emp-article"><%= e.articles[0].reference %></div>
+                                    <% if(e.articleRef) { %>
+                                        <div class="emp-article"><%= e.articleRef %></div>
                                         <div class="emp-dims"><%= e.stockActuel %>/<%= e.capaciteMax %></div>
                                     <% } %>
                                 </div>

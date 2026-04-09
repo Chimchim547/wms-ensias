@@ -16,11 +16,21 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">Type</label>
-                <select name="type" class="form-select" required>
+                <select name="type" class="form-select" required id="typeSelect" onchange="toggleCategorie()">
                     <option value="stockage" <%= zone.type === 'stockage' ? 'selected' : '' %>>Stockage</option>
                     <option value="reception" <%= zone.type === 'reception' ? 'selected' : '' %>>Réception</option>
                     <option value="expedition" <%= zone.type === 'expedition' ? 'selected' : '' %>>Expédition</option>
                 </select>
+            </div>
+            <div class="col-md-3" id="categorieBlock">
+                <label class="form-label">Catégorie de produits</label>
+                <select name="categorieId" class="form-select" id="categorieSelect">
+                    <option value="">-- Toutes catégories --</option>
+                    <% categories.forEach(c => { %>
+                    <option value="<%= c.id %>" <%= zone.categorieId === c.id ? 'selected' : '' %>><%= c.nom %></option>
+                    <% }) %>
+                </select>
+                <small class="text-muted">Réservée à cette catégorie de produits</small>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Couleur</label>
@@ -30,15 +40,15 @@
                 <label class="form-label">Poids max (kg)</label>
                 <input type="number" step="0.1" name="poidsMax" class="form-control" value="<%= zone.poidsMax %>" required>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Longueur max (cm)</label>
                 <input type="number" step="0.1" name="dimensionMaxLongueur" class="form-control" value="<%= zone.dimensionMaxLongueur %>" required>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Largeur max (cm)</label>
                 <input type="number" step="0.1" name="dimensionMaxLargeur" class="form-control" value="<%= zone.dimensionMaxLargeur %>" required>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Hauteur max (cm)</label>
                 <input type="number" step="0.1" name="dimensionMaxHauteur" class="form-control" value="<%= zone.dimensionMaxHauteur %>" required>
             </div>
@@ -48,5 +58,18 @@
             </div>
         </form>
     </div>
+    <script>
+    function toggleCategorie() {
+        const type = document.getElementById('typeSelect').value;
+        const block = document.getElementById('categorieBlock');
+        if (type === 'stockage') {
+            block.style.display = 'block';
+        } else {
+            block.style.display = 'none';
+            document.getElementById('categorieSelect').value = '';
+        }
+    }
+    toggleCategorie();
+    </script>
 </body>
 </html>
