@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Clients</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <h2>Répertoire Clients</h2>
+        <p class="text-muted">Les clients sont automatiquement ajoutés lors de la création des commandes.</p>
+        
+        <p><%= clients.length %> client(s) enregistré(s)</p>
+        
+        <table class="table table-striped">
+            <thead class="table-dark">
+                <tr><th>Nom</th><th>Téléphone</th><th>Email</th><th>Adresse</th><th>Commandes</th><th>Total dépensé</th></tr>
+            </thead>
+            <tbody>
+                <% clients.forEach(c => { %>
+                <tr>
+                    <td><strong><%= c.nom %></strong></td>
+                    <td><%= c.telephone %></td>
+                    <td><%= c.email %></td>
+                    <td><%= c.adresse %></td>
+                    <td><%= c.commandes.length %></td>
+                    <td><%= c.commandes.reduce((sum, cmd) => sum + cmd.prixTotal, 0).toFixed(2) %> DH</td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

@@ -63,14 +63,14 @@ router.post('/create', async (req, res) => {
       const fournisseur = await prisma.fournisseur.findUnique({ where: { id: parseInt(fournisseurId) } });
       await prisma.notification.create({
         data: {
-          message: `⚠️ Bon ${numero} : ÉCART QUANTITATIF détecté ! ${ecarts.join(', ')}. Fournisseur: ${fournisseur.nom}. Contrôle qualité en attente.`,
+          message: `Bon ${numero} : ÉCART QUANTITATIF détecté ! ${ecarts.join(', ')}. Fournisseur: ${fournisseur.nom}. Contrôle qualité en attente.`,
           lien: '/reception',
           destinataireRole: 'RESPONSABLE_RECEPTION'
         }
       });
       await prisma.notification.create({
         data: {
-          message: `⚠️ Réception partielle - Bon ${numero} : quantités manquantes détectées. ${ecarts.join(', ')}. Fournisseur: ${fournisseur.nom}.`,
+          message: `Réception partielle - Bon ${numero} : quantités manquantes détectées. ${ecarts.join(', ')}. Fournisseur: ${fournisseur.nom}.`,
           lien: '/reception',
           destinataireRole: 'RESPONSABLE_ENTREPOT'
         }
@@ -79,7 +79,7 @@ router.post('/create', async (req, res) => {
       const fournisseur = await prisma.fournisseur.findUnique({ where: { id: parseInt(fournisseurId) } });
       await prisma.notification.create({
         data: {
-          message: `📦 Bon ${numero} : SURPLUS détecté ! ${ecarts.join(', ')}. Fournisseur: ${fournisseur.nom}. Vérifiez et procédez au contrôle qualité.`,
+          message: `Bon ${numero} : SURPLUS détecté ! ${ecarts.join(', ')}. Fournisseur: ${fournisseur.nom}. Vérifiez et procédez au contrôle qualité.`,
           lien: '/reception',
           destinataireRole: 'RESPONSABLE_RECEPTION'
         }
@@ -87,7 +87,7 @@ router.post('/create', async (req, res) => {
     } else {
       await prisma.notification.create({
         data: {
-          message: `✅ Bon ${numero} : quantités conformes. ${ids.length} article(s). Contrôle qualité en attente.`,
+          message: `Bon ${numero} : quantités conformes. ${ids.length} article(s). Contrôle qualité en attente.`,
           lien: '/reception',
           destinataireRole: 'RESPONSABLE_RECEPTION'
         }
@@ -131,23 +131,34 @@ router.post('/controle/:id', async (req, res) => {
   const articlesReserve = [];
   
   for (let i = 0; i < bon.lignes.length; i++) {
-    const qa = parseInt(qas[i]) || 0;
     const action = acts[i] || 'aucune';
-    const qteRefusee = bon.lignes[i].quantiteRecue - qa;
-    
+    let qa = parseInt(qas[i]) || 0;
+    let qteRefusee = bon.lignes[i].quantiteRecue - qa;
     let statut = 'ACCEPTE';
-    if (qteRefusee > 0 && action === 'quarantaine') statut = 'QUARANTAINE';
-    else if (qteRefusee > 0 && action === 'retour_fournisseur') statut = 'RETOUR';
-    else if (qteRefusee > 0 && action === 'accepter_reserve') statut = 'ACCEPTE_RESERVE';
-    else if (qa === 0) statut = 'REFUSE';
+    
+    if (action === 'accepter_reserve') {
+      // Accepté avec réserve = tout est accepté, rien n'est refusé
+      qteRefusee = bon.lignes[i].quantiteRecue - qa;
+      statut = 'ACCEPTE_RESERVE';
+    } else if (qteRefusee > 0 && action === 'quarantaine') {
+      statut = 'QUARANTAINE';
+    } else if (qteRefusee > 0 && action === 'retour_fournisseur') {
+      statut = 'RETOUR';
+    } else if (qa === 0) {
+      statut = 'REFUSE';
+    }
 
     const motifFinal = mots[i] === 'autre' ? (motAutres[i] || 'Non spécifié') : (mots[i] || 'Non spécifié');
 
+    // Si accepté avec réserve, tout est accepté
+    const qteAccepteeFinale = action === 'accepter_reserve' ? bon.lignes[i].quantiteRecue : qa;
+    const qteRefuseeFinale = action === 'accepter_reserve' ? 0 : qteRefusee;
+    
     await prisma.ligneBonReception.update({
       where: { id: bon.lignes[i].id },
       data: { 
-        quantiteAcceptee: qa,
-        quantiteRefusee: qteRefusee,
+        quantiteAcceptee: qteAccepteeFinale,
+        quantiteRefusee: qteRefuseeFinale,
         actionNonConforme: action,
         statutQualite: statut,
         observations: qteRefusee > 0 
@@ -177,11 +188,12 @@ router.post('/controle/:id', async (req, res) => {
       });
     }
     
-    if (action === 'accepter_reserve' && qteRefusee > 0) {
+    if (action === 'accepter_reserve' && bon.lignes[i].quantiteRecue > qa) {
+      // Les unités "avec réserve" entrent aussi en stock
       await prisma.mouvementStock.create({
         data: {
           type: 'ENTREE',
-          quantite: qteRefusee,
+          quantite: bon.lignes[i].quantiteRecue - qa,
           articleId: bon.lignes[i].articleId
         }
       });
@@ -200,11 +212,10 @@ router.post('/controle/:id', async (req, res) => {
     }
   }
 
-  // Notifications selon le résultat
   if (resultat === 'conforme') {
     await prisma.notification.create({
       data: {
-        message: `Bon ${bon.numero} : contrôle qualité conforme ✓. Stock mis à jour. Veuillez affecter les articles.`,
+        message: `Bon ${bon.numero} : contrôle qualité conforme. Stock mis à jour. Veuillez affecter les articles.`,
         lien: '/emplacements/affecter',
         destinataireRole: 'RESPONSABLE_ENTREPOT'
       }
@@ -217,7 +228,7 @@ router.post('/controle/:id', async (req, res) => {
     
     await prisma.notification.create({
       data: {
-        message: `⚠ Bon ${bon.numero} : partiellement conforme. Stock mis à jour avec les quantités acceptées.${details}`,
+        message: `Bon ${bon.numero} : partiellement conforme. Stock mis à jour avec les quantités acceptées.${details}`,
         lien: '/emplacements/affecter',
         destinataireRole: 'RESPONSABLE_ENTREPOT'
       }
@@ -229,38 +240,36 @@ router.post('/controle/:id', async (req, res) => {
     
     await prisma.notification.create({
       data: {
-        message: `❌ Bon ${bon.numero} : non conforme. Aucune entrée en stock.${details}`,
+        message: `Bon ${bon.numero} : non conforme. Aucune entrée en stock.${details}`,
         lien: '/reception',
         destinataireRole: 'RESPONSABLE_ENTREPOT'
       }
     });
   }
 
-  // Notification retour fournisseur
   if (articlesRetour.length > 0) {
     const listeRetour = articlesRetour.map(a => a.article.reference + ' - ' + a.article.designation + ' (qte: ' + a.quantite + ')').join(', ');
     await prisma.notification.create({
       data: {
-        message: `🔄 RETOUR FOURNISSEUR - Bon ${bon.numero} : ${listeRetour}. Fournisseur: ${bon.fournisseur.nom}. Veuillez préparer le bon de retour.`,
+        message: `RETOUR FOURNISSEUR - Bon ${bon.numero} : ${listeRetour}. Fournisseur: ${bon.fournisseur.nom}. Veuillez préparer le bon de retour.`,
         lien: '/reception',
         destinataireRole: 'RESPONSABLE_RECEPTION'
       }
     });
     await prisma.notification.create({
       data: {
-        message: `🔄 Retour fournisseur prévu pour ${bon.fournisseur.nom} : ${listeRetour}. Bon ${bon.numero}.`,
+        message: `Retour fournisseur prévu pour ${bon.fournisseur.nom} : ${listeRetour}. Bon ${bon.numero}.`,
         lien: '/reception',
         destinataireRole: 'RESPONSABLE_ENTREPOT'
       }
     });
   }
 
-  // Notification quarantaine
   if (articlesQuarantaine.length > 0) {
     const listeQuarantaine = articlesQuarantaine.map(a => a.article.reference + ' - ' + a.article.designation + ' (qte: ' + a.quantite + ')').join(', ');
     await prisma.notification.create({
       data: {
-        message: `🟡 QUARANTAINE - Bon ${bon.numero} : ${listeQuarantaine}. Articles bloqués en attente de décision.`,
+        message: `QUARANTAINE - Bon ${bon.numero} : ${listeQuarantaine}. Articles bloqués en attente de décision.`,
         lien: '/reception',
         destinataireRole: 'RESPONSABLE_ENTREPOT'
       }
@@ -280,7 +289,7 @@ router.post('/controle/:id', async (req, res) => {
           const article = await prisma.article.findUnique({ where: { id: bon.lignes[i].articleId } });
           await prisma.notification.create({
             data: {
-              message: `🔔 Réapprovisionnement : ${article.reference} - ${article.designation} est de nouveau en stock ! Le backorder ${bo.numero} peut être traité.`,
+              message: `Réapprovisionnement : ${article.reference} - ${article.designation} est de nouveau en stock ! Le backorder ${bo.numero} peut être traité.`,
               lien: '/commandes',
               destinataireRole: 'RESPONSABLE_COMMANDE'
             }
@@ -314,13 +323,40 @@ router.post('/controle/:id', async (req, res) => {
           const excedent = stockActuel - capaciteMax;
           await prisma.notification.create({
             data: {
-              message: `📦 CAPACITÉ DÉPASSÉE - ${articleCheck.reference} : stock ${stockActuel} dépasse la capacité de ${articleCheck.emplacement.code} (max ${capaciteMax}). ${excedent} unité(s) à affecter à un autre emplacement.`,
+              message: `CAPACITÉ DÉPASSÉE - ${articleCheck.reference} : stock ${stockActuel} dépasse la capacité de ${articleCheck.emplacement.code} (max ${capaciteMax}). ${excedent} unité(s) à affecter à un autre emplacement.`,
               lien: '/emplacements/affecter',
               destinataireRole: 'RESPONSABLE_ENTREPOT'
             }
           });
         }
       }
+    }
+  }
+
+  // Vérifier les commandes en attente de stock
+  const commandesEnAttente = await prisma.commande.findMany({
+    where: { statut: 'EN_ATTENTE_STOCK' },
+    include: { lignes: { include: { article: { include: { mouvements: true } } } } }
+  });
+  
+  for (const cmd of commandesEnAttente) {
+    let toutDispo = true;
+    for (const ligne of cmd.lignes) {
+      const ent = ligne.article.mouvements.filter(m => m.type === 'ENTREE').reduce((sum, m) => sum + m.quantite, 0);
+      const sor = ligne.article.mouvements.filter(m => m.type === 'SORTIE').reduce((sum, m) => sum + m.quantite, 0);
+      if (ent - sor < ligne.quantite) {
+        toutDispo = false;
+        break;
+      }
+    }
+    if (toutDispo) {
+      await prisma.notification.create({
+        data: {
+          message: 'Stock disponible pour ' + cmd.numero + ' ! Vous pouvez relancer le picking.',
+          lien: '/commandes',
+          destinataireRole: 'RESPONSABLE_COMMANDE'
+        }
+      });
     }
   }
 
@@ -352,68 +388,212 @@ router.get('/pdf/:id', async (req, res) => {
   if (!bon) return res.status(404).send('Bon introuvable');
 
   const doc = new PDFDocument({ margin: 50 });
-  
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'attachment; filename=BR-' + bon.numero + '.pdf');
   doc.pipe(res);
 
+  // En-tête
   doc.fontSize(20).font('Helvetica-Bold').text('WMS ENSIAS', { align: 'center' });
   doc.fontSize(14).text('Bon de Reception', { align: 'center' });
   doc.moveDown();
-
-  doc.fontSize(10).font('Helvetica');
-  doc.text('Numero: ' + bon.numero);
-  doc.text('Date: ' + bon.date.toLocaleDateString('fr-FR'));
-  doc.text('Fournisseur: ' + bon.fournisseur.nom);
-  doc.text('Adresse: ' + bon.fournisseur.adresse);
-  doc.text('Telephone: ' + bon.fournisseur.telephone);
+  doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
   doc.moveDown();
 
-  doc.font('Helvetica-Bold').fontSize(11);
-  const tableTop = doc.y;
-  doc.text('Reference', 50, tableTop, { width: 80 });
-  doc.text('Designation', 130, tableTop, { width: 150 });
-  doc.text('Qte Cmd', 280, tableTop, { width: 60 });
-  doc.text('Qte Recue', 340, tableTop, { width: 70 });
-  doc.text('Qte Acceptee', 410, tableTop, { width: 80 });
-  
-  doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
-  
-  doc.font('Helvetica').fontSize(10);
-  let y = tableTop + 25;
-  
+  // Infos bon + fournisseur
+  const infoY = doc.y;
+  doc.fontSize(10).font('Helvetica-Bold').text('Bon de reception:', 50, infoY);
+  doc.font('Helvetica');
+  doc.text('Numero: ' + bon.numero, 50, infoY + 15);
+  doc.text('Date: ' + bon.date.toLocaleDateString('fr-FR'), 50, infoY + 30);
+  if (bon.controleQualite) {
+    doc.text('Resultat: ' + bon.controleQualite.resultat, 50, infoY + 45);
+  }
+
+  doc.font('Helvetica-Bold').text('Fournisseur:', 350, infoY);
+  doc.font('Helvetica');
+  doc.text(bon.fournisseur.nom, 350, infoY + 15);
+  doc.text(bon.fournisseur.adresse, 350, infoY + 30);
+  doc.text('Tel: ' + bon.fournisseur.telephone, 350, infoY + 45);
+  doc.text('Email: ' + bon.fournisseur.email, 350, infoY + 60);
+
+  doc.y = infoY + 80;
+  doc.moveDown();
+
+  // Tableau détaillé
+  doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+  const tableTop = doc.y + 10;
+  doc.font('Helvetica-Bold').fontSize(7);
+  doc.text('Ref', 50, tableTop, { width: 45 });
+  doc.text('Designation', 95, tableTop, { width: 85 });
+  doc.text('Cmd', 180, tableTop, { width: 30 });
+  doc.text('Recue', 210, tableTop, { width: 35 });
+  doc.text('Acceptee', 245, tableTop, { width: 40 });
+  doc.text('Refusee', 285, tableTop, { width: 35 });
+  doc.text('Action', 320, tableTop, { width: 55 });
+  doc.text('Motif', 375, tableTop, { width: 80 });
+  doc.text('Statut', 455, tableTop, { width: 95 });
+
+  doc.moveTo(50, tableTop + 12).lineTo(550, tableTop + 12).stroke();
+
+  doc.font('Helvetica').fontSize(7);
+  let y = tableTop + 20;
+
+  let totalAccepte = 0;
+  let totalRefuse = 0;
+  let totalQuarantaine = 0;
+  let totalRetour = 0;
+  let totalReserve = 0;
+
   bon.lignes.forEach(ligne => {
-    doc.text(ligne.article.reference, 50, y, { width: 80 });
-    doc.text(ligne.article.designation, 130, y, { width: 150 });
-    doc.text(String(ligne.quantiteCommandee), 280, y, { width: 60 });
-    doc.text(String(ligne.quantiteRecue), 340, y, { width: 70 });
-    doc.text(String(ligne.quantiteAcceptee), 410, y, { width: 80 });
-    y += 20;
+    if (y > 700) { doc.addPage(); y = 50; }
+
+    // Extraire le motif depuis observations
+    let motif = '-';
+    if (ligne.observations) {
+      const motifMatch = ligne.observations.match(/Motif: ([^|]+)/);
+      if (motifMatch) motif = motifMatch[1].trim();
+    }
+
+    let action = ligne.actionNonConforme || '-';
+    if (action === 'retour_fournisseur') action = 'Retour';
+    else if (action === 'quarantaine') action = 'Quarantaine';
+    else if (action === 'accepter_reserve') action = 'Avec reserve';
+    else if (action === 'aucune') action = '-';
+
+    let statut = ligne.statutQualite || 'EN_ATTENTE';
+    if (statut === 'ACCEPTE') statut = 'Accepte';
+    else if (statut === 'REFUSE') statut = 'Refuse';
+    else if (statut === 'QUARANTAINE') statut = 'Quarantaine';
+    else if (statut === 'RETOUR') statut = 'Retour fourn.';
+    else if (statut === 'ACCEPTE_RESERVE') statut = 'Accepte reserve';
+    else if (statut === 'ACCEPTE_APRES_QUARANTAINE') statut = 'Accepte ap. quar.';
+    else if (statut === 'RETOUR_APRES_QUARANTAINE') statut = 'Retour ap. quar.';
+    else if (statut === 'REJETE') statut = 'Rejete';
+    else if (statut === 'EN_ATTENTE') statut = 'En attente';
+
+    doc.text(ligne.article.reference, 50, y, { width: 45 });
+    doc.text(ligne.article.designation, 95, y, { width: 85 });
+    doc.text(String(ligne.quantiteCommandee), 180, y, { width: 30 });
+    doc.text(String(ligne.quantiteRecue), 210, y, { width: 35 });
+    doc.text(String(ligne.quantiteAcceptee), 245, y, { width: 40 });
+    doc.text(String(ligne.quantiteRefusee), 285, y, { width: 35 });
+    doc.text(action, 320, y, { width: 55 });
+    doc.text(motif.substring(0, 25), 375, y, { width: 80 });
+    doc.text(statut, 455, y, { width: 95 });
+
+    totalAccepte += ligne.quantiteAcceptee;
+    totalRefuse += ligne.quantiteRefusee;
+
+    if (ligne.statutQualite === 'QUARANTAINE') totalQuarantaine += ligne.quantiteRefusee;
+    if (ligne.statutQualite === 'RETOUR' || ligne.statutQualite === 'RETOUR_APRES_QUARANTAINE') totalRetour += ligne.quantiteRefusee;
+    if (ligne.statutQualite === 'ACCEPTE_RESERVE') totalReserve += ligne.quantiteAcceptee;
+
+    y += 18;
   });
 
-  if (bon.controleQualite) {
-    doc.moveDown(2);
-    y = doc.y;
+  doc.moveTo(50, y + 5).lineTo(550, y + 5).stroke();
+
+  // Résumé
+  y += 20;
+  doc.font('Helvetica-Bold').fontSize(11).text('Resume', 50, y);
+  y += 18;
+  doc.font('Helvetica').fontSize(9);
+
+  doc.text('Total articles commandes: ' + bon.lignes.reduce((s, l) => s + l.quantiteCommandee, 0), 50, y);
+  doc.text('Total recus: ' + bon.lignes.reduce((s, l) => s + l.quantiteRecue, 0), 300, y);
+  y += 15;
+  doc.text('Total acceptes: ' + totalAccepte, 50, y);
+  doc.text('Total refuses: ' + totalRefuse, 300, y);
+  y += 15;
+
+  if (totalQuarantaine > 0 || totalRetour > 0 || totalReserve > 0) {
+    doc.font('Helvetica-Bold').fontSize(9);
+    if (totalQuarantaine > 0) { doc.text('En quarantaine: ' + totalQuarantaine, 50, y); y += 15; }
+    if (totalRetour > 0) { doc.text('Retour fournisseur: ' + totalRetour, 50, y); y += 15; }
+    if (totalReserve > 0) { doc.text('Acceptes avec reserve: ' + totalReserve, 50, y); y += 15; }
+  }
+
+  // Ecarts
+  const ecarts = bon.lignes.filter(l => l.quantiteRecue !== l.quantiteCommandee);
+  if (ecarts.length > 0) {
+    y += 10;
     doc.moveTo(50, y).lineTo(550, y).stroke();
-    doc.moveDown();
-    doc.font('Helvetica-Bold').fontSize(11).text('Controle Qualite');
-    doc.font('Helvetica').fontSize(10);
-    doc.text('Resultat: ' + bon.controleQualite.resultat);
-    doc.text('Date: ' + bon.controleQualite.dateControle.toLocaleDateString('fr-FR'));
+    y += 10;
+    doc.font('Helvetica-Bold').fontSize(11).text('Ecarts quantitatifs', 50, y);
+    y += 18;
+    doc.font('Helvetica').fontSize(9);
+    ecarts.forEach(l => {
+      const ecart = l.quantiteRecue - l.quantiteCommandee;
+      const signe = ecart > 0 ? '+' : '';
+      doc.text(l.article.reference + ' - ' + l.article.designation + ' : Cmd ' + l.quantiteCommandee + ' / Recu ' + l.quantiteRecue + ' (ecart: ' + signe + ecart + ')', 50, y);
+      y += 14;
+    });
+  }
+
+  // Détail des non-conformités
+  const nonConformes = bon.lignes.filter(l => l.quantiteRefusee > 0);
+  if (nonConformes.length > 0) {
+    y += 10;
+    doc.moveTo(50, y).lineTo(550, y).stroke();
+    y += 10;
+    doc.font('Helvetica-Bold').fontSize(11).text('Detail des non-conformites', 50, y);
+    y += 18;
+    doc.font('Helvetica').fontSize(9);
+    nonConformes.forEach(l => {
+      let motif = '-';
+      if (l.observations) {
+        const m = l.observations.match(/Motif: ([^|]+)/);
+        if (m) motif = m[1].trim();
+      }
+      let action = l.actionNonConforme || '-';
+      if (action === 'retour_fournisseur') action = 'Retour fournisseur';
+      else if (action === 'quarantaine') action = 'Mise en quarantaine';
+      else if (action === 'accepter_reserve') action = 'Accepte avec reserve';
+
+      doc.text(l.article.reference + ' : ' + l.quantiteRefusee + ' refuse(s) - Action: ' + action + ' - Motif: ' + motif, 50, y);
+      y += 14;
+    });
+  }
+
+  // Contrôle qualité
+  if (bon.controleQualite) {
+    y += 10;
+    doc.moveTo(50, y).lineTo(550, y).stroke();
+    y += 10;
+    doc.font('Helvetica-Bold').fontSize(11).text('Controle Qualite', 50, y);
+    y += 18;
+    doc.font('Helvetica').fontSize(9);
+    doc.text('Resultat: ' + bon.controleQualite.resultat, 50, y); y += 14;
+    doc.text('Date controle: ' + bon.controleQualite.dateControle.toLocaleDateString('fr-FR'), 50, y); y += 14;
     if (bon.controleQualite.commentaire) {
-      doc.text('Commentaire: ' + bon.controleQualite.commentaire);
+      doc.text('Commentaire: ' + bon.controleQualite.commentaire, 50, y); y += 14;
     }
   }
 
+  // Signatures
   doc.moveDown(3);
+  const sigY = doc.y > 680 ? 50 : doc.y + 20;
+  if (doc.y > 680) doc.addPage();
+
   doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
   doc.moveDown();
-  doc.fontSize(9).text('Document genere automatiquement par WMS ENSIAS - ' + new Date().toLocaleDateString('fr-FR'), { align: 'center' });
+  doc.fontSize(9).font('Helvetica');
+  const sY = doc.y;
+  doc.text('Resp. Reception:', 50, sY);
+  doc.text('Fournisseur:', 350, sY);
+  doc.moveTo(50, sY + 30).lineTo(200, sY + 30).stroke();
+  doc.moveTo(350, sY + 30).lineTo(500, sY + 30).stroke();
+  doc.text('Date: ________________', 50, sY + 40);
+  doc.text('Date: ________________', 350, sY + 40);
+
+  doc.moveDown(4);
+  doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+  doc.moveDown();
+  doc.fontSize(8).text('WMS ENSIAS - Bon de reception genere automatiquement le ' + new Date().toLocaleDateString('fr-FR'), { align: 'center' });
 
   doc.end();
 });
 
-// Page quarantaine
 router.get('/quarantaine', async (req, res) => {
   const lignesQuarantaine = await prisma.ligneBonReception.findMany({
     where: { statutQualite: 'QUARANTAINE' },
@@ -425,7 +605,6 @@ router.get('/quarantaine', async (req, res) => {
   res.render('reception/quarantaine', { lignes: lignesQuarantaine });
 });
 
-// Décision quarantaine
 router.post('/quarantaine/decision/:id', async (req, res) => {
   const ligneId = parseInt(req.params.id);
   const { decision, commentaire } = req.body;
@@ -465,7 +644,7 @@ router.post('/quarantaine/decision/:id', async (req, res) => {
 
     await prisma.notification.create({
       data: {
-        message: `✅ Quarantaine - ${ligne.article.reference} (${ligne.quantiteRefusee} unités) : ACCEPTÉ après inspection. Stock mis à jour.`,
+        message: `Quarantaine - ${ligne.article.reference} (${ligne.quantiteRefusee} unités) : ACCEPTÉ après inspection. Stock mis à jour.`,
         lien: '/emplacements/affecter',
         destinataireRole: 'RESPONSABLE_ENTREPOT'
       }
@@ -482,14 +661,14 @@ router.post('/quarantaine/decision/:id', async (req, res) => {
 
     await prisma.notification.create({
       data: {
-        message: `🔄 Quarantaine - ${ligne.article.reference} (${ligne.quantiteRefusee} unités) : RETOUR FOURNISSEUR. Fournisseur: ${ligne.bonReception.fournisseur.nom}.`,
+        message: `Quarantaine - ${ligne.article.reference} (${ligne.quantiteRefusee} unités) : RETOUR FOURNISSEUR. Fournisseur: ${ligne.bonReception.fournisseur.nom}.`,
         lien: '/reception',
         destinataireRole: 'RESPONSABLE_RECEPTION'
       }
     });
     await prisma.notification.create({
       data: {
-        message: `🔄 Retour fournisseur après quarantaine : ${ligne.article.reference} (${ligne.quantiteRefusee}) → ${ligne.bonReception.fournisseur.nom}.`,
+        message: `Retour fournisseur après quarantaine : ${ligne.article.reference} (${ligne.quantiteRefusee}) → ${ligne.bonReception.fournisseur.nom}.`,
         lien: '/reception',
         destinataireRole: 'RESPONSABLE_ENTREPOT'
       }
@@ -506,7 +685,7 @@ router.post('/quarantaine/decision/:id', async (req, res) => {
 
     await prisma.notification.create({
       data: {
-        message: `❌ Quarantaine - ${ligne.article.reference} (${ligne.quantiteRefusee} unités) : REJETÉ. Motif: ${commentaire || 'Non spécifié'}.`,
+        message: `Quarantaine - ${ligne.article.reference} (${ligne.quantiteRefusee} unités) : REJETÉ. Motif: ${commentaire || 'Non spécifié'}.`,
         lien: '/reception/quarantaine',
         destinataireRole: 'RESPONSABLE_ENTREPOT'
       }
@@ -516,7 +695,6 @@ router.post('/quarantaine/decision/:id', async (req, res) => {
   res.redirect('/reception/quarantaine');
 });
 
-// Décision écart quantitatif
 router.post('/decision-ecart/:id', async (req, res) => {
   const bonId = parseInt(req.params.id);
   const { decision } = req.body;
@@ -544,7 +722,7 @@ router.post('/decision-ecart/:id', async (req, res) => {
 
     await prisma.notification.create({
       data: {
-        message: `✅ Bon ${bon.numero} : surplus ACCEPTÉ. Articles: ${surplusDetails.join(', ')}. Fournisseur ${bon.fournisseur.nom} notifié pour ajustement facture. Procédez au contrôle qualité.`,
+        message: `Bon ${bon.numero} : surplus ACCEPTÉ. Articles: ${surplusDetails.join(', ')}. Fournisseur ${bon.fournisseur.nom} notifié. Procédez au contrôle qualité.`,
         lien: '/reception/controle/' + bonId,
         destinataireRole: 'RESPONSABLE_RECEPTION'
       }
@@ -552,7 +730,7 @@ router.post('/decision-ecart/:id', async (req, res) => {
 
     await prisma.notification.create({
       data: {
-        message: `📦 Bon ${bon.numero} : surplus accepté. ${surplusDetails.join(', ')}. Fournisseur ${bon.fournisseur.nom} notifié.`,
+        message: `Bon ${bon.numero} : surplus accepté. ${surplusDetails.join(', ')}. Fournisseur ${bon.fournisseur.nom} notifié.`,
         lien: '/reception',
         destinataireRole: 'RESPONSABLE_ENTREPOT'
       }
@@ -579,14 +757,14 @@ router.post('/decision-ecart/:id', async (req, res) => {
 
     await prisma.notification.create({
       data: {
-        message: `🔄 Bon ${bon.numero} : surplus refusé et retourné à ${bon.fournisseur.nom}. ${surplus.join(', ')}.`,
+        message: `Bon ${bon.numero} : surplus refusé et retourné à ${bon.fournisseur.nom}. ${surplus.join(', ')}.`,
         lien: '/reception',
         destinataireRole: 'RESPONSABLE_RECEPTION'
       }
     });
     await prisma.notification.create({
       data: {
-        message: `🔄 Surplus retourné à ${bon.fournisseur.nom} pour Bon ${bon.numero}. ${surplus.join(', ')}.`,
+        message: `Surplus retourné à ${bon.fournisseur.nom} pour Bon ${bon.numero}. ${surplus.join(', ')}.`,
         lien: '/reception',
         destinataireRole: 'RESPONSABLE_ENTREPOT'
       }
@@ -596,7 +774,6 @@ router.post('/decision-ecart/:id', async (req, res) => {
   return res.redirect('/reception');
 });
 
-// Bon de retour fournisseur PDF
 router.get('/bon-retour/:id', async (req, res) => {
   const PDFDocument = require('pdfkit');
   const bon = await prisma.bonReception.findUnique({

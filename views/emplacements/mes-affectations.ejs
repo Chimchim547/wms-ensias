@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>WMS - Mes Affectations</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../layouts/navbar') %>
+    <div class="container mt-4">
+        <h2>Mes Affectations</h2>
+        <p class="text-muted">Missions de mise en stock assignées par le responsable entrepôt.</p>
+
+        <% const enCours = missions.filter(m => m.statut === 'EN_COURS'); %>
+        <% const terminees = missions.filter(m => m.statut === 'TERMINE'); %>
+
+        <% if (enCours.length === 0 && terminees.length === 0) { %>
+            <div class="alert alert-info">Aucune affectation pour le moment.</div>
+        <% } %>
+
+        <% if (enCours.length > 0) { %>
+        <h5 class="mt-3">En cours (<%= enCours.length %>)</h5>
+        <% enCours.forEach(m => { %>
+        <div class="card mb-3 border-warning">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">AFF-<%= m.id %> — <%= m.article.reference %> - <%= m.article.designation %></h6>
+                <span class="badge bg-danger"><%= m.quantite %> unité(s)</span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-md-3">
+                        <strong>Article :</strong><br>
+                        <%= m.article.reference %><br>
+                        <small class="text-muted"><%= m.article.designation %></small>
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Quantité :</strong><br>
+                        <span class="text-danger"><strong><%= m.quantite %></strong></span>
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Poids total :</strong><br>
+                        <%= (m.quantite * m.article.poids).toFixed(1) %> kg
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Destination :</strong><br>
+                        <span class="badge bg-primary"><%= m.emplacement.code %></span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Zone :</strong><br>
+                        <%= m.emplacement.zone.code %> — <%= m.emplacement.zone.nom %>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>Dimensions article :</strong><br>
+                        <%= m.article.longueur %> x <%= m.article.largeur %> x <%= m.article.hauteur %> cm
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Emplacement :</strong><br>
+                        <%= m.emplacement.longueur %> x <%= m.emplacement.largeur %> x <%= m.emplacement.hauteur %> cm
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Date assignation :</strong><br>
+                        <%= m.dateCreation.toLocaleDateString('fr-FR') %> <%= m.dateCreation.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}) %>
+                    </div>
+                </div>
+                <hr>
+                <div class="d-flex gap-2">
+                    <form action="/emplacements/valider-affectation/<%= m.id %>" method="POST" class="d-inline">
+                        <button class="btn btn-success" onclick="return confirm('Confirmer que les articles ont été déplacés ?')">Valider (terminé)</button>
+                    </form>
+                    <a href="/emplacements/affectation-pdf/<%= m.id %>" class="btn btn-outline-danger">PDF Mission</a>
+                </div>
+            </div>
+        </div>
+        <% }) %>
+        <% } %>
+
+        <% if (terminees.length > 0) { %>
+        <h5 class="mt-4">Terminées (<%= terminees.length %>)</h5>
+        <table class="table table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>N°</th>
+                    <th>Article</th>
+                    <th>Quantité</th>
+                    <th>Destination</th>
+                    <th>Zone</th>
+                    <th>Date assignation</th>
+                    <th>Date validation</th>
+                    <th>PDF</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% terminees.forEach(m => { %>
+                <tr>
+                    <td>AFF-<%= m.id %></td>
+                    <td><%= m.article.reference %> - <%= m.article.designation %></td>
+                    <td><%= m.quantite %></td>
+                    <td><span class="badge bg-success"><%= m.emplacement.code %></span></td>
+                    <td><%= m.emplacement.zone.code %></td>
+                    <td><%= m.dateCreation.toLocaleDateString('fr-FR') %></td>
+                    <td><%= m.dateValidation ? m.dateValidation.toLocaleDateString('fr-FR') : '-' %></td>
+                    <td><a href="/emplacements/affectation-pdf/<%= m.id %>" class="btn btn-sm btn-outline-danger">PDF</a></td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+        <% } %>
+    </div>
+</body>
+</html>

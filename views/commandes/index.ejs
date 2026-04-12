@@ -76,7 +76,7 @@
                     <td><%= c.date.toLocaleDateString('fr-FR') %></td>
                     <td><%= c.nomClient %></td>
                     <td><%= c.prixTotal.toFixed(2) %> DH</td>
-                    <td><%= c.lignes.length %></td>
+                    <td><%= c.lignes.length %> (<%= c.lignes.reduce((sum, l) => sum + l.quantite, 0) %> unités)</td>
                     <td>
                         <% if (c.statut === 'EN_ATTENTE') { %>
                             <span class="badge bg-secondary">En attente</span>
@@ -130,6 +130,14 @@
                                 </form>
                             <% } else { %>
                                 <span class="text-danger">⏳ En attente réappro</span>
+                            <% } %>
+                        <% } else if (c.statut === 'EN_ATTENTE_STOCK') { %>
+                            <% if (c.stockDispo) { %>
+                                <form action="/commandes/relancer-attente/<%= c.id %>" method="POST" class="d-inline">
+                                    <button class="btn btn-sm btn-success" onclick="return confirm('Relancer le picking ?')">Relancer picking</button>
+                                </form>
+                            <% } else { %>
+                                <span class="badge bg-warning">En attente stock</span>
                             <% } %>
                         <% } else if (c.statut === 'EXPEDIEE') { %>
                             <span class="text-success">Terminée</span>

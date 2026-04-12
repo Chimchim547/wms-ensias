@@ -302,10 +302,12 @@
             <li class="nav-item"><a class="nav-link" href="/reception/quarantaine">Quarantaine</a></li>
             <li class="nav-item"><a class="nav-link" href="/inventaire">Inventaire</a></li>
             <li class="nav-item"><a class="nav-link" href="/articles/roulement">Rotation</a></li>
+            <li class="nav-item"><a class="nav-link" href="/emplacements/suivi-affectations">Suivi mises en stock</a></li>
           <% } %>
 
           <% if (user.role === 'RESPONSABLE_COMMANDE') { %>
             <li class="nav-item"><a class="nav-link" href="/commandes">Commandes</a></li>
+            <li class="nav-item"><a class="nav-link" href="/commandes/clients">Clients</a></li>
             <li class="nav-item"><a class="nav-link" href="/commandes/chargement">Chargement</a></li>
           <% } %>
 
@@ -313,6 +315,7 @@
             <li class="nav-item"><a class="nav-link" href="/mouvements">Mouvements</a></li>
             <li class="nav-item"><a class="nav-link" href="/commandes/preparation">Préparation</a></li>
             <li class="nav-item"><a class="nav-link" href="/inventaire">Inventaire</a></li>
+            <li class="nav-item"><a class="nav-link" href="/emplacements/mes-affectations">Mes affectations</a></li>
           <% } %>
 
           <% if (user.role === 'RESPONSABLE_RECEPTION') { %>

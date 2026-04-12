@@ -30,6 +30,7 @@ model Utilisateur {
   motDePasse String
   role      Role
   lignesPicking LignePicking[]
+  missions MissionAffectation[]
 }
 
 model Categorie {
@@ -62,6 +63,7 @@ model Article {
   lignesBonReception LigneBonReception[]
   mouvements        MouvementStock[]
   stockEmplacements StockEmplacement[] @relation("StockEmplacements")
+  missions MissionAffectation[]
 }
 
 model Zone {
@@ -89,6 +91,7 @@ model Emplacement {
   zone      Zone     @relation(fields: [zoneId], references: [id])
   articles  Article[]
   stockEmplacements StockEmplacement[] @relation("StockEmplacements")
+  missions MissionAffectation[]
 }
 
 model Fournisseur {
@@ -149,6 +152,9 @@ model Commande {
   backorders       Commande[] @relation("BackorderRelation")
   lignes          LigneCommande[]
   listePicking    ListePicking?
+  clientId        Int?
+  client          Client?  @relation(fields: [clientId], references: [id])
+  telephoneClient String?
 }
 
 model LigneCommande {
@@ -230,4 +236,25 @@ model StockEmplacement {
   emplacement   Emplacement @relation("StockEmplacements", fields: [emplacementId], references: [id])
   
   @@unique([articleId, emplacementId])
+}
+model Client {
+  id        Int      @id @default(autoincrement())
+  nom       String
+  adresse   String
+  telephone String
+  email     String
+  commandes Commande[]
+}
+model MissionAffectation {
+  id              Int      @id @default(autoincrement())
+  articleId       Int
+  article         Article  @relation(fields: [articleId], references: [id])
+  emplacementId   Int
+  emplacement     Emplacement @relation(fields: [emplacementId], references: [id])
+  quantite        Int
+  magasinierId    Int
+  magasinier      Utilisateur @relation(fields: [magasinierId], references: [id])
+  statut          String   @default("EN_COURS")
+  dateCreation    DateTime @default(now())
+  dateValidation  DateTime?
 }

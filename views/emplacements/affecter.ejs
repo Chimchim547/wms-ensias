@@ -37,7 +37,6 @@
                 </select>
             </div>
 
-            <!-- Détails de l'article sélectionné -->
             <div id="articleDetails" class="card mb-3" style="display:none;">
                 <div class="card-body">
                     <h6>Article sélectionné :</h6>
@@ -57,9 +56,8 @@
                 </div>
             </div>
 
-            <!-- Alerte répartition -->
             <div id="alerteRepartition" class="alert alert-warning" style="display:none;">
-                <strong>⚠ Répartition nécessaire !</strong> Aucun emplacement ne peut contenir la totalité du stock. 
+                <strong>Répartition nécessaire !</strong> Aucun emplacement ne peut contenir la totalité du stock. 
                 Affectez à l'emplacement avec la plus grande capacité, puis réaffectez le reste.
                 <br><span id="repartitionDetails"></span>
             </div>
@@ -75,11 +73,23 @@
                 <div id="compatibleCount" class="text-success mt-1" style="display:none;"></div>
             </div>
 
+            <div class="mb-3">
+                <label class="form-label">Assigner à un magasinier</label>
+                <select name="magasinierId" class="form-select">
+                    <option value="">-- Sans assignation --</option>
+                    <% if (typeof magasiniers !== 'undefined') { %>
+                        <% magasiniers.forEach(m => { %>
+                        <option value="<%= m.id %>"><%= m.prenom %> <%= m.nom %></option>
+                        <% }) %>
+                    <% } %>
+                </select>
+                <small class="text-muted">Le magasinier recevra une notification pour déplacer physiquement les articles.</small>
+            </div>
+
             <button type="submit" class="btn btn-primary" id="btnAffecter" disabled>Affecter</button>
             <a href="/emplacements" class="btn btn-secondary">Annuler</a>
         </form>
 
-        <!-- Tableau récapitulatif -->
         <div class="mt-4">
             <h5>Emplacements libres disponibles</h5>
             <table class="table table-sm table-striped">
@@ -106,14 +116,9 @@
 
     <script>
     const emplacementsData = <%- JSON.stringify(emplacements.map(e => ({
-        id: e.id,
-        code: e.code,
-        zone: e.zone.code,
+        id: e.id, code: e.code, zone: e.zone.code,
         categorie: e.zone.categorie ? e.zone.categorie.nom : 'Toutes',
-        longueur: e.longueur,
-        largeur: e.largeur,
-        hauteur: e.hauteur,
-        poidsMax: e.poidsMax
+        longueur: e.longueur, largeur: e.largeur, hauteur: e.hauteur, poidsMax: e.poidsMax
     }))) %>;
 
     document.getElementById('articleSelect').addEventListener('change', function() {
@@ -131,7 +136,6 @@
         alerteRepartition.style.display = 'none';
         btnAffecter.disabled = true;
 
-        // Reset tableau
         emplacementsData.forEach(e => {
             const row = document.getElementById('emp-row-' + e.id);
             if (row) { row.style.background = ''; row.style.fontWeight = ''; }
@@ -145,7 +149,6 @@
             return;
         }
 
-        // Afficher détails
         document.getElementById('artCategorie').textContent = selected.dataset.categorie;
         
         const excedent = parseInt(selected.dataset.excedent);
@@ -171,7 +174,6 @@
         document.getElementById('artCapaciteTotale').textContent = 'Capacité dispo: ' + selected.dataset.capacitetotale + ' unités';
         articleDetails.style.display = 'block';
 
-        // Filtrer compatibles
         const compatibles = JSON.parse(selected.dataset.compatibles);
         const stockAAffecter = excedent > 0 ? excedent : parseInt(selected.dataset.stock);
         const besoinRepartition = selected.dataset.repartition === 'true';
@@ -182,7 +184,6 @@
             return;
         }
 
-        // Alerte répartition
         if (besoinRepartition) {
             alerteRepartition.style.display = 'block';
             const capTotal = parseInt(selected.dataset.capacitetotale);

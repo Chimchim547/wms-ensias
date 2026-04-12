@@ -26,7 +26,7 @@
                     <th>Article</th>
                     <th>Quantité</th>
                     <th>Capacité</th>
-                    <th>Actions</th>
+                    
                 </tr>
             </thead>
             <tbody>
@@ -57,9 +57,7 @@
                             <td><%= se.article.reference %> - <%= se.article.designation %></td>
                             <td><strong><%= se.quantite %></strong></td>
                             <td><%= totalQte %>/<%= capMax %></td>
-                            <td>
-                                <a href="/emplacements/affecter" class="btn btn-sm btn-outline-primary">Affecter</a>
-                            </td>
+                            
                         </tr>
                         <% }) %>
                     <% } else { %>
@@ -72,9 +70,7 @@
                         <td>-</td>
                         <td>-</td>
                         <td>-</td>
-                        <td>
-                            <a href="/emplacements/affecter" class="btn btn-sm btn-outline-primary">Affecter</a>
-                        </td>
+                       
                     </tr>
                     <% } %>
                 <% }) %>

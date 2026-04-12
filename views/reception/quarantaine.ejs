@@ -99,7 +99,9 @@
         <% }) %>
         <% } %>
 
-        <a href="/reception" class="btn btn-secondary">Retour aux réceptions</a>
+        <% if (user.role === 'RESPONSABLE_RECEPTION') { %>
+            <a href="/reception" class="btn btn-secondary">Retour aux réceptions</a>
+        <% } %>
     </div>
 </body>
 </html>
